@@ -198,7 +198,7 @@ async function renderSection(endpoint, containerId, params = '') {
                             const details = await detailsRes.json();
                             renderPersonDetails(details);
                         } else {
-                            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids`);
+                            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos`);
                             const details = await detailsRes.json();
                             renderMovieDetails(details, type);
                         }
@@ -321,7 +321,7 @@ if (searchInput) {
                                         const details = await detailsRes.json();
                                         renderPersonDetails(details);
                                     } else {
-                                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids`);
+                                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos`);
                                         const details = await detailsRes.json();
                                         renderMovieDetails(details, type);
                                     }
@@ -381,6 +381,43 @@ function renderMovieDetails(details, mediaType) {
         }).join('');
     }
 
+    // Trailers
+    let trailersHTML = '';
+    if (details.videos && details.videos.results) {
+        // Filtrar trailers oficiales de YouTube
+        const trailers = details.videos.results.filter(v => v.site === 'YouTube' && v.type === 'Trailer');
+        if (trailers.length > 0) {
+            const topTrailers = trailers.slice(0, 2);
+            trailersHTML = topTrailers.map(trailer => `
+                <div class="trailer-wrapper">
+                    <iframe 
+                        src="https://www.youtube.com/embed/${trailer.key}?controls=1&modestbranding=1&rel=0" 
+                        title="${trailer.name}" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Additional info grid
+    const formatCurrency = (val) => val ? `$${(val / 1000000).toFixed(1)}M` : '';
+    const extraDetailsList = [];
+    if (details.status) extraDetailsList.push(`<div class="info-item"><span class="info-label">Status</span><span class="info-value">${details.status}</span></div>`);
+    if (details.original_language) extraDetailsList.push(`<div class="info-item"><span class="info-label">Language</span><span class="info-value">${details.original_language.toUpperCase()}</span></div>`);
+    if (details.budget) extraDetailsList.push(`<div class="info-item"><span class="info-label">Budget</span><span class="info-value">${formatCurrency(details.budget)}</span></div>`);
+    if (details.revenue) extraDetailsList.push(`<div class="info-item"><span class="info-label">Revenue</span><span class="info-value">${formatCurrency(details.revenue)}</span></div>`);
+    if (details.number_of_seasons) extraDetailsList.push(`<div class="info-item"><span class="info-label">Seasons</span><span class="info-value">${details.number_of_seasons}</span></div>`);
+    if (details.number_of_episodes) extraDetailsList.push(`<div class="info-item"><span class="info-label">Episodes</span><span class="info-value">${details.number_of_episodes}</span></div>`);
+
+    const extraDetailsHTML = extraDetailsList.length > 0 ? `
+        <div class="movie-extra-grid">
+            ${extraDetailsList.join('')}
+        </div>
+    ` : '';
+
     const html = `
         <div class="movie-details-container">
             <div class="movie-header">
@@ -394,6 +431,7 @@ function renderMovieDetails(details, mediaType) {
                         ${genres}
                     </div>
                     <p class="movie-overview">${details.overview || 'Sin descripción disponible.'}</p>
+                    ${extraDetailsHTML}
                     <div class="movie-links-row">
                         ${letterboxdLink}
                         ${imdbLink}
@@ -401,6 +439,14 @@ function renderMovieDetails(details, mediaType) {
                     </div>
                 </div>
             </div>
+            ${trailersHTML ? `
+            <div class="movie-trailers-section" style="margin-top: 32px;">
+                <h2 class="section-title">Trailers</h2>
+                <div class="trailers-grid">
+                    ${trailersHTML}
+                </div>
+            </div>
+            ` : ''}
             ${castHTML ? `
             <div class="movie-cast-section" style="margin-top: 24px;">
                 <h2 class="section-title">Cast / Reparto</h2>
@@ -477,18 +523,28 @@ function renderPersonDetails(details) {
         }).join('');
     }
 
+    // Extra info grid
+    const extraDetailsList = [];
+    if (details.known_for_department) extraDetailsList.push(`<div class="info-item"><span class="info-label">Known For</span><span class="info-value">${details.known_for_department}</span></div>`);
+    if (details.gender) extraDetailsList.push(`<div class="info-item"><span class="info-label">Gender</span><span class="info-value">${details.gender === 1 ? 'Female' : details.gender === 2 ? 'Male' : 'Unknown'}</span></div>`);
+    if (details.birthday) extraDetailsList.push(`<div class="info-item"><span class="info-label">Born</span><span class="info-value">${details.birthday}</span></div>`);
+    if (details.deathday) extraDetailsList.push(`<div class="info-item"><span class="info-label">Died</span><span class="info-value">${details.deathday}</span></div>`);
+    if (details.place_of_birth) extraDetailsList.push(`<div class="info-item"><span class="info-label">Birthplace</span><span class="info-value">${details.place_of_birth}</span></div>`);
+
+    const extraDetailsHTML = extraDetailsList.length > 0 ? `
+        <div class="movie-extra-grid">
+            ${extraDetailsList.join('')}
+        </div>
+    ` : '';
+
     const html = `
         <div class="movie-details-container">
             <div class="movie-header">
                 <img class="movie-poster" src="${profile}" alt="${name}">
                 <div class="movie-info">
                     <h1>${name}</h1>
-                    <div class="movie-meta">
-                        ${department}
-                        ${birthday}
-                        ${placeOfBirth}
-                    </div>
-                    <p class="movie-overview">${details.biography || 'Sin biografía disponible.'}</p>
+                    <p class="movie-overview" style="margin-top: 16px;">${details.biography || 'Sin biografía disponible.'}</p>
+                    ${extraDetailsHTML}
                     <div class="movie-links-row">
                         ${letterboxdLink}
                         ${imdbLink}
@@ -519,7 +575,7 @@ function renderPersonDetails(details) {
             window.scrollTo({ top: 30, behavior: 'smooth' });
             try {
                 const lang = navigator.language || 'es-MX';
-                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids`);
+                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos`);
                 const creditDetails = await detailsRes.json();
                 renderMovieDetails(creditDetails, type);
             } catch(err) {
@@ -528,3 +584,4 @@ function renderPersonDetails(details) {
         });
     });
 }
+
