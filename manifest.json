@@ -1,0 +1,64 @@
+{
+  "name": "Post Credits",
+  "short_name": "Post Credits",
+  "start_url": "https://postcredits.netlify.app/",
+  "display": "standalone",
+  "description": "A movie companion app that provides information about movies, TV shows, and the people who make them.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "Icons/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "Icons/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "Icons/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "Icons/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/Screenshot from 2026-05-29 01-22-48.png",
+      "sizes": "385x834",
+      "type": "image/png",
+      "description": "A screenshot of the home page"
+    },
+    {
+      "src": "screenshots/Screenshot from 2026-05-29 01-22-56.png",
+      "sizes": "385x834",
+      "type": "image/png",
+      "description": "A screenshot of the home page"
+    },
+    {
+      "src": "screenshots/Screenshot from 2026-05-29 01-23-05.png",
+      "sizes": "385x834",
+      "type": "image/png",
+      "description": "A screenshot of the home page"
+    },
+    {
+      "src": "screenshots/Screenshot from 2026-05-29 01-23-31.png",
+      "sizes": "385x834",
+      "type": "image/png",
+      "description": "A screenshot of the home page"
+    }
+  ]
+}
