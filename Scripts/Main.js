@@ -53,6 +53,26 @@ let backdrops = [];
 
 async function fetchLatestBackdrops() {
 	if (!BACKDROP_CONTAINER) return;
+	
+	const bgSource = localStorage.getItem('bg-source') || 'theaters';
+	const labelEl = document.getElementById('backdrop-label');
+	const settingsBtn = document.getElementById('settings-backdrop-btn');
+	if (settingsBtn) settingsBtn.style.display = '';
+	
+	if (bgSource === 'favorites') {
+		const favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
+		if (favs.length > 0) {
+			if (labelEl) labelEl.textContent = 'Favorite';
+			backdrops = favs.map(movie => ({
+				url: `https://image.tmdb.org/t/p/original${movie.backdrop_path}`,
+				title: movie.title || "Unknown"
+			}));
+			initCarousel();
+			return;
+		}
+	}
+	
+	if (labelEl) labelEl.textContent = 'Now Showing';
 	try {
 		const region = (navigator.language || 'es-MX').split('-')[1] || 'US';
 		// Obtener las películas recientes en cines (Now Playing) con título en inglés
@@ -138,6 +158,8 @@ async function loadMovieBackdrops(id, mediaType, defaultTitle) {
 				title: defaultTitle
 			}));
 			initCarousel();
+            const settingsBtn = document.getElementById('settings-backdrop-btn');
+            if (settingsBtn) settingsBtn.style.display = 'none';
 		}
 	} catch(e) {
 		console.error("Error fetching specific backdrops", e);
@@ -151,6 +173,153 @@ if (viewBackdropBtn) {
 	viewBackdropBtn.addEventListener('click', () => {
 		document.body.classList.toggle('backdrop-view-mode');
 	});
+}
+
+// Settings Menu Logic
+const settingsBtn = document.getElementById('settings-backdrop-btn');
+const settingsMenu = document.getElementById('backdrop-settings-menu');
+const bgSourceRadios = document.querySelectorAll('input[name="bg-source"]');
+
+if (settingsBtn && settingsMenu) {
+	settingsBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		settingsMenu.classList.toggle('active');
+		if (settingsMenu.classList.contains('active')) {
+			renderSettingsFavorites();
+		}
+	});
+	document.addEventListener('click', (e) => {
+		if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+			settingsMenu.classList.remove('active');
+		}
+	});
+}
+
+if (bgSourceRadios.length > 0) {
+	const currentSource = localStorage.getItem('bg-source') || 'theaters';
+	bgSourceRadios.forEach(radio => {
+		if (radio.value === currentSource) {
+			radio.checked = true;
+		}
+		radio.addEventListener('change', (e) => {
+			localStorage.setItem('bg-source', e.target.value);
+			settingsMenu.classList.remove('active');
+			fetchLatestBackdrops();
+		});
+	});
+}
+
+function isFavorite(id) {
+    let favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
+    return favs.some(f => f.id == id);
+}
+
+function toggleFavorite(movieData, btnEl) {
+    let favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
+    const index = favs.findIndex(f => f.id == movieData.id);
+    if (index >= 0) {
+        favs.splice(index, 1);
+        if(btnEl) btnEl.classList.remove('active');
+    } else {
+        favs.push(movieData);
+        if(btnEl) btnEl.classList.add('active');
+    }
+    localStorage.setItem('postCreditsFavs', JSON.stringify(favs));
+    
+    // If currently showing favorites, refresh backdrops
+    if (localStorage.getItem('bg-source') === 'favorites') {
+        fetchLatestBackdrops();
+    }
+}
+
+function renderSettingsFavorites() {
+    const favList = document.getElementById('settings-favorites-list');
+    if (!favList) return;
+    const favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
+    
+    if (favs.length === 0) {
+        favList.innerHTML = '<span style="color: var(--muted); font-size: 0.85rem;">No favorites added yet.</span>';
+        return;
+    }
+    
+    favList.innerHTML = favs.map(f => {
+        const poster = f.poster_path ? `https://image.tmdb.org/t/p/w200${f.poster_path}` : (f.backdrop_path ? `https://image.tmdb.org/t/p/w200${f.backdrop_path}` : 'https://via.placeholder.com/40x40?text=?');
+        return `<img src="${poster}" title="${f.title}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0;">`;
+    }).join('');
+}
+
+let miniSearchTimeout;
+let miniSearchResults = [];
+const miniSearchInput = document.getElementById('settings-mini-search');
+if (miniSearchInput) {
+    miniSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(miniSearchTimeout);
+        const resultsContainer = document.getElementById('settings-mini-results');
+        
+        if (!query) {
+            resultsContainer.innerHTML = '';
+            return;
+        }
+        
+        miniSearchTimeout = setTimeout(async () => {
+            try {
+                const lang = navigator.language || 'es-MX';
+                const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&language=${lang}&query=${encodeURIComponent(query)}&page=1`);
+                const searchData = await searchRes.json();
+                
+                if (searchData.results && searchData.results.length > 0) {
+                    miniSearchResults = searchData.results.filter(r => r.media_type === 'movie' || r.media_type === 'tv');
+                    
+                    resultsContainer.innerHTML = miniSearchResults.map(item => {
+                        const title = item.title || item.name;
+                        const poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : 'https://via.placeholder.com/40x60?text=?';
+                        const isFav = isFavorite(item.id);
+                        
+                        return `
+                            <div style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
+                                <img src="${poster}" style="width: 32px; height: 48px; object-fit: cover; border-radius: 4px; flex-shrink: 0;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <p style="margin: 0; font-size: 0.9rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;" title="${title}">${title}</p>
+                                    <p style="margin: 0; font-size: 0.75rem; color: var(--muted);">${item.media_type === 'movie' ? 'Movie' : 'TV Show'}</p>
+                                </div>
+                                <button class="mini-fav-btn fav-btn ${isFav ? 'active' : ''}" data-id="${item.id}" style="padding: 6px; font-size: 1rem; border-radius: 50%; min-width: 32px; height: 32px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    resultsContainer.querySelectorAll('.mini-fav-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const id = btn.dataset.id;
+                            const movie = miniSearchResults.find(m => m.id == id);
+                            if (movie) {
+                                const movieData = {
+                                    id: movie.id,
+                                    title: movie.title || movie.name,
+                                    backdrop_path: movie.backdrop_path,
+                                    poster_path: movie.poster_path,
+                                    media_type: movie.media_type
+                                };
+                                toggleFavorite(movieData, btn);
+                                renderSettingsFavorites();
+                                const mainFavBtn = document.getElementById('fav-btn');
+                                if (mainFavBtn && mainFavBtn.dataset.id == id) {
+                                    isFavorite(id) ? mainFavBtn.classList.add('active') : mainFavBtn.classList.remove('active');
+                                }
+                            }
+                        });
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<span style="color: var(--muted); font-size: 0.85rem; padding: 8px;">No results found.</span>';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }, 400);
+    });
 }
 
 // --- Dynamic Main Content ---
@@ -171,10 +340,26 @@ async function renderSection(endpoint, containerId, params = '') {
                 if (!poster) return ''; // Saltarse los que no tienen póster
                 const type = item.media_type || (endpoint.includes('tv') ? 'tv' : (endpoint.includes('person') ? 'person' : 'movie'));
                 
+                let extraInfo = '';
+                if (type === 'person') {
+                    const knownFor = item.known_for_department ? item.known_for_department : 'Acting';
+                    extraInfo = `<p class="media-card-extra">${knownFor}</p>`;
+                } else {
+                    const date = item.release_date || item.first_air_date;
+                    const year = date ? date.split('-')[0] : '';
+                    const rating = item.vote_average ? `⭐ ${item.vote_average.toFixed(1)}` : '';
+                    if (year || rating) {
+                        extraInfo = `<p class="media-card-extra">${year} ${year && rating ? '&bull;' : ''} ${rating}</p>`;
+                    }
+                }
+
                 return `
                     <div class="media-card" data-id="${item.id}" data-type="${type}" data-title="${title.replace(/"/g, '&quot;')}">
                         <img src="${poster}" alt="${title}" loading="lazy">
-                        <div class="title-overlay">${title}</div>
+                        <div class="title-overlay">
+                            <span class="media-card-title">${title}</span>
+                            ${extraInfo}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -235,6 +420,46 @@ if (searchForm) {
 
 let searchTimeout;
 
+function restoreHome() {
+    const main = document.getElementById('main-content');
+    if (searchInput) searchInput.value = '';
+    main.innerHTML = `
+        <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-scroller" id="now-playing-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-scroller" id="trending-movies-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-scroller" id="trending-tv-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Trending People</h2><div class="media-scroller" id="trending-people-list"></div></section>
+        <section class="links-section">
+            <h2 class="section-title">Explore More</h2>
+            <div class="links-grid">
+                <a href="https://www.themoviedb.org/" target="_blank" class="external-link tmdb" title="The Movie Database">
+                    <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB">
+                </a>
+                <a href="https://letterboxd.com/" target="_blank" class="external-link letterboxd" title="Letterboxd">
+                    <img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd">
+                </a>
+                <a href="https://www.imdb.com/" target="_blank" class="external-link imdb" title="IMDb">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb">
+                </a>
+                <a href="https://www.rottentomatoes.com/" target="_blank" class="external-link rotten" title="Rotten Tomatoes">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg" alt="Rotten Tomatoes">
+                </a>
+            </div>
+        </section>
+    `;
+    loadDefaultContent();
+    fetchLatestBackdrops();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+const homeTitleBtn = document.querySelector('.hero-header__title');
+if (homeTitleBtn) {
+    homeTitleBtn.addEventListener('click', () => {
+        if (document.body.classList.contains('is-scrolled')) {
+            restoreHome();
+        }
+    });
+}
+
 if (searchInput) {
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
@@ -242,33 +467,7 @@ if (searchInput) {
         const main = document.getElementById('main-content');
 
         if (!query) {
-            // Restaurar contenido por defecto
-            main.innerHTML = `
-                <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-scroller" id="now-playing-list"></div></section>
-                <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-scroller" id="trending-movies-list"></div></section>
-                <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-scroller" id="trending-tv-list"></div></section>
-                <section class="media-section"><h2 class="section-title">Trending People</h2><div class="media-scroller" id="trending-people-list"></div></section>
-                <section class="links-section">
-                    <h2 class="section-title">Explore More</h2>
-                    <div class="links-grid">
-                        <a href="https://www.themoviedb.org/" target="_blank" class="external-link tmdb" title="The Movie Database">
-                            <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB">
-                        </a>
-                        <a href="https://letterboxd.com/" target="_blank" class="external-link letterboxd" title="Letterboxd">
-                            <img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd">
-                        </a>
-                        <a href="https://www.imdb.com/" target="_blank" class="external-link imdb" title="IMDb">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb">
-                        </a>
-                        <a href="https://www.rottentomatoes.com/" target="_blank" class="external-link rotten" title="Rotten Tomatoes">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg" alt="Rotten Tomatoes">
-                        </a>
-                    </div>
-                </section>
-            `;
-            loadDefaultContent();
-            fetchLatestBackdrops();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            restoreHome();
             return;
         }
 
@@ -285,16 +484,37 @@ if (searchInput) {
                     if (results.length > 0) {
                         const html = `
                             <section class="media-section">
-                                <h2 class="section-title">Resultados para "${query}"</h2>
-                                <div class="links-grid" style="gap: 32px 20px;">
+                                <h2 class="section-title">Results for "${query}"</h2>
+                                <div class="search-results-grid">
                                     ${results.map(item => {
                                         const title = item.title || item.name;
                                         const posterPath = item.poster_path || item.profile_path;
-                                        const poster = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : 'https://via.placeholder.com/300x450?text=No+Photo';
+                                        const poster = posterPath ? `https://image.tmdb.org/t/p/w200${posterPath}` : 'https://via.placeholder.com/200x300?text=No+Photo';
+                                        
+                                        let metaText = item.media_type === 'movie' ? 'Movie' : (item.media_type === 'tv' ? 'TV Show' : 'Person');
+                                        const date = item.release_date || item.first_air_date;
+                                        if (date) {
+                                            metaText += ` • ${date.split('-')[0]}`;
+                                        }
+
+                                        let overview = item.overview || '';
+                                        if (item.media_type === 'person') {
+                                            overview = item.known_for ? item.known_for.map(k => k.title || k.name).join(', ') : 'No description.';
+                                            if (!overview) overview = 'No description.';
+                                        } else if (!overview) {
+                                            overview = 'No description available.';
+                                        }
+
                                         return `
-                                            <div class="media-card" style="width: 100%; aspect-ratio: 2/3;" data-id="${item.id}" data-type="${item.media_type}" data-title="${title.replace(/"/g, '&quot;')}">
-                                                <img src="${poster}" alt="${title}" loading="lazy">
-                                                <div class="title-overlay">${title}</div>
+                                            <div class="search-result-card" data-id="${item.id}" data-type="${item.media_type}" data-title="${title.replace(/"/g, '&quot;')}">
+                                                <div class="search-result-poster">
+                                                    <img src="${poster}" alt="${title}" loading="lazy">
+                                                </div>
+                                                <div class="search-result-info">
+                                                    <h3 class="search-result-title">${title}</h3>
+                                                    <span class="search-result-meta">${metaText}</span>
+                                                    <p class="search-result-overview">${overview}</p>
+                                                </div>
                                             </div>
                                         `;
                                     }).join('')}
@@ -304,7 +524,7 @@ if (searchInput) {
                         main.innerHTML = html;
 
                         // Add click listeners to load details
-                        main.querySelectorAll('.media-card').forEach(card => {
+                        main.querySelectorAll('.search-result-card').forEach(card => {
                             card.addEventListener('click', async () => {
                                 const id = card.dataset.id;
                                 const type = card.dataset.type;
@@ -331,10 +551,10 @@ if (searchInput) {
                             });
                         });
                     } else {
-                        main.innerHTML = `<h2 style="color:white;text-align:center;margin-top:50px;">No se encontraron resultados para "${query}"</h2>`;
+                        main.innerHTML = `<h2 style="color:white;text-align:center;margin-top:50px;">No results found for "${query}"</h2>`;
                     }
                 } else {
-                    main.innerHTML = `<h2 style="color:white;text-align:center;margin-top:50px;">No se encontraron resultados para "${query}"</h2>`;
+                    main.innerHTML = `<h2 style="color:white;text-align:center;margin-top:50px;">No results found for "${query}"</h2>`;
                 }
             } catch (error) {
                 console.error("Error en la búsqueda:", error);
@@ -418,6 +638,9 @@ function renderMovieDetails(details, mediaType) {
         </div>
     ` : '';
 
+    const favClass = isFavorite(details.id) ? 'active' : '';
+    const favButton = `<button class="fav-btn ${favClass}" id="fav-btn" data-id="${details.id}" title="Toggle Favorite"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>`;
+
     const html = `
         <div class="movie-details-container">
             <div class="movie-header">
@@ -433,6 +656,7 @@ function renderMovieDetails(details, mediaType) {
                     <p class="movie-overview">${details.overview || 'Sin descripción disponible.'}</p>
                     ${extraDetailsHTML}
                     <div class="movie-links-row">
+                        ${favButton}
                         ${letterboxdLink}
                         ${imdbLink}
                         ${tmdbLink}
@@ -460,6 +684,22 @@ function renderMovieDetails(details, mediaType) {
 
     main.innerHTML = html;
     
+    const favBtnEl = document.getElementById('fav-btn');
+    if (favBtnEl) {
+        favBtnEl.addEventListener('click', () => {
+            const movieData = {
+                id: details.id,
+                title: title,
+                backdrop_path: details.backdrop_path,
+                poster_path: details.poster_path,
+                media_type: mediaType
+            };
+            toggleFavorite(movieData, favBtnEl);
+            if (document.getElementById('backdrop-settings-menu').classList.contains('active')) {
+                renderSettingsFavorites();
+            }
+        });
+    }
     // Cargar backdrops específicos de la película
     loadMovieBackdrops(details.id, mediaType, title);
 

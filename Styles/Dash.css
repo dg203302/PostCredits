@@ -18,6 +18,7 @@
 
 * {
 	box-sizing: border-box;
+	-webkit-tap-highlight-color: transparent;
 }
 
 html {
@@ -276,6 +277,99 @@ input {
 	transform: translateY(0);
 }
 
+.media-card-title {
+	display: block;
+	margin-bottom: 4px;
+}
+
+.media-card-extra {
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--accent);
+	font-weight: 500;
+}
+
+/* --- Search Results --- */
+.search-results-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 20px;
+	width: 100%;
+}
+
+@media (min-width: 800px) {
+	.search-results-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.search-result-card {
+	display: flex;
+	background: var(--bg-panel);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+	cursor: pointer;
+	height: 160px;
+	width: 100%;
+}
+
+.search-result-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 15px 40px rgba(34, 211, 238, 0.2);
+}
+
+.search-result-poster {
+	width: 106px;
+	flex-shrink: 0;
+	height: 100%;
+}
+
+.search-result-poster img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.search-result-info {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	flex: 1;
+	min-width: 0;
+}
+
+.search-result-title {
+	font-size: 1.15rem;
+	font-weight: 700;
+	color: #fff;
+	margin: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.search-result-meta {
+	font-size: 0.8rem;
+	color: var(--accent);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-weight: 600;
+}
+
+.search-result-overview {
+	font-size: 0.9rem;
+	color: var(--muted);
+	margin: 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	line-height: 1.4;
+}
+
 .links-section {
 	grid-column: span 12;
 	margin-top: 16px;
@@ -358,6 +452,7 @@ body.is-scrolled .hero-header__content {
 
 body.is-scrolled .hero-header__title {
 	font-size: clamp(2rem, 4vw, 3.2rem);
+	cursor: pointer;
 }
 
 body.is-scrolled .hero-header__subtitle {
@@ -422,6 +517,40 @@ body.is-scrolled .content-grid {
 	.media-section,
 	.links-section {
 		grid-column: span 12;
+	}
+
+	body.backdrop-view-mode .hero-header__content {
+		top: 16px;
+		left: 16px;
+		right: 16px;
+		width: auto;
+		display: flex;
+		justify-content: center;
+	}
+	
+	body.backdrop-view-mode .hero-header__title {
+		font-size: 1.6rem;
+		text-align: center;
+	}
+	
+	.current-backdrop-info {
+		top: 16px;
+		right: 16px;
+	}
+
+	body.backdrop-view-mode .current-backdrop-info {
+		top: auto;
+		bottom: 40px;
+		right: 16px;
+		left: 16px;
+		align-items: center;
+	}
+	
+	body.backdrop-view-mode .backdrop-title-row {
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 4px;
 	}
 }
 
@@ -520,6 +649,12 @@ body.is-scrolled .background-carousel .backdrop.active {
 
 body.is-scrolled .current-backdrop-info {
 	opacity: 0 !important;
+	pointer-events: none;
+	display: none !important;
+}
+
+body.is-scrolled .backdrop-title-row {
+	display: none !important;
 }
 
 /* --- Movie Details View --- */
@@ -697,6 +832,35 @@ body.is-scrolled .current-backdrop-info {
 	background: #163659;
 }
 
+.fav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+    border-radius: 16px;
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.fav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-3px) scale(1.05);
+}
+
+.fav-btn.active {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.fav-btn.active svg {
+    fill: currentColor;
+}
+
 .external-link img {
 	height: 28px;
 	object-fit: contain;
@@ -791,12 +955,40 @@ body.is-scrolled .current-backdrop-info {
 	border-color: rgba(255, 255, 255, 0.3);
 }
 
-body.is-scrolled .view-backdrop-btn {
+body.is-scrolled .view-backdrop-btn,
+body.is-scrolled .settings-backdrop-btn {
 	display: none;
 }
 
 body.backdrop-view-mode {
 	overflow: hidden;
+}
+
+body.backdrop-view-mode .settings-backdrop-btn,
+body.backdrop-view-mode .settings-menu {
+	display: none !important;
+}
+
+.settings-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: rgba(10, 16, 32, 0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+	z-index: 250;
+	text-align: left;
+	min-width: 180px;
+}
+
+.settings-menu.active {
+    display: flex;
 }
 
 body.backdrop-view-mode main {

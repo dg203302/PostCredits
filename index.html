@@ -14,12 +14,41 @@
         <div class="color-overlay"></div>
         <div class="current-backdrop-info" id="backdrop-info">
             <div class="backdrop-title-row">
-                <span class="label">Now Showing</span>
+                <span class="label" id="backdrop-label">Now Showing</span>
                 <span class="title" id="backdrop-title"></span>
             </div>
-            <button class="view-backdrop-btn" id="view-backdrop-btn" title="Toggle Backdrop View">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+            <div class="backdrop-controls" style="display: flex; flex-direction: column; gap: 8px; position: relative;">
+                <button class="view-backdrop-btn" id="view-backdrop-btn" title="Toggle Backdrop View">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="view-backdrop-btn settings-backdrop-btn" id="settings-backdrop-btn" title="Backdrop Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+                <div class="settings-menu" id="backdrop-settings-menu" style="min-width: 320px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Source</h4>
+                    <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="bg-source" value="theaters" checked>
+                            <span>In Theaters</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="bg-source" value="favorites">
+                            <span>My Favorites</span>
+                        </label>
+                    </div>
+                    
+                    <div id="settings-favorites-list" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: thin;">
+                        <!-- Loaded via JS -->
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                        <input type="text" id="settings-mini-search" placeholder="Search to add favorites..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; font-size: 0.9rem;">
+                        <div id="settings-mini-results" style="max-height: 200px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin;">
+                            <!-- Loaded via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <header class="hero-header" data-header>
             <div class="hero-header__glow" aria-hidden="true"></div>
@@ -99,6 +128,11 @@
             </section>
         </main>
         
+        <div class="global-ads-container" style="width: 100%; padding: 20px; display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; justify-content: center; align-items: center; gap: 24px; z-index: 10; position: relative; scrollbar-width: none;">
+            <script async="async" data-cfasync="false" src="https://pl29579098.effectivecpmnetwork.com/5b59996c51c718c2f6769a412bd6c106/invoke.js"></script>
+            <div id="container-5b59996c51c718c2f6769a412bd6c106"></div>
+        </div>
+
         <footer class="site-credits footer-credits">
             Developed by <a href="https://www.diegogarcia-dev.com.ar" target="_blank">dg-dev</a>
         </footer>
