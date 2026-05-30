@@ -333,11 +333,14 @@ async function renderSection(endpoint, containerId, params = '') {
         const data = await response.json();
         
         if (data.results) {
-            container.innerHTML = data.results.map(item => {
+            const validItems = data.results.filter(item => item.poster_path || item.profile_path);
+            const initialItems = validItems.slice(0, 6);
+            const remainingItems = validItems.slice(6);
+
+            const generateCardHTML = (item) => {
                 const title = item.title || item.name;
                 const posterPath = item.poster_path || item.profile_path;
                 const poster = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '';
-                if (!poster) return ''; // Saltarse los que no tienen póster
                 const type = item.media_type || (endpoint.includes('tv') ? 'tv' : (endpoint.includes('person') ? 'person' : 'movie'));
                 
                 let extraInfo = '';
@@ -362,10 +365,11 @@ async function renderSection(endpoint, containerId, params = '') {
                         </div>
                     </div>
                 `;
-            }).join('');
+            };
 
-            // Agregar listeners de clic
-            container.querySelectorAll('.media-card').forEach(card => {
+            container.innerHTML = initialItems.map(generateCardHTML).join('');
+
+            const attachListenerToCard = (card) => {
                 card.addEventListener('click', async () => {
                     const id = card.dataset.id;
                     const type = card.dataset.type;
@@ -378,6 +382,7 @@ async function renderSection(endpoint, containerId, params = '') {
                     window.scrollTo({ top: 30, behavior: 'smooth' });
                     
                     try {
+                        const lang = navigator.language || 'es-MX';
                         if (type === 'person') {
                             const detailsRes = await fetch(`https://api.themoviedb.org/3/person/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=combined_credits,external_ids`);
                             const details = await detailsRes.json();
@@ -391,7 +396,49 @@ async function renderSection(endpoint, containerId, params = '') {
                         console.error(err);
                     }
                 });
-            });
+            };
+
+            container.querySelectorAll('.media-card').forEach(attachListenerToCard);
+
+            if (remainingItems.length > 0) {
+                const btnHTML = `
+                    <div class="show-more-wrapper" style="grid-column: 1 / -1; text-align: center; margin-top: 10px; margin-bottom: 10px;">
+                        <button class="go-back-btn show-more-btn" style="position: relative; top: auto; left: auto; margin: 0; box-shadow: none;">
+                            Show more (${remainingItems.length})
+                        </button>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', btnHTML);
+                
+                const wrapper = container.querySelector('.show-more-wrapper');
+                const btn = wrapper.querySelector('.show-more-btn');
+                
+                let isExpanded = false;
+                let extraCards = [];
+                
+                btn.addEventListener('click', () => {
+                    if (!isExpanded) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = remainingItems.map(generateCardHTML).join('');
+                        extraCards = Array.from(tempDiv.children);
+                        extraCards.forEach(card => {
+                            container.insertBefore(card, wrapper);
+                            attachListenerToCard(card);
+                        });
+                        btn.textContent = 'Show less';
+                        isExpanded = true;
+                    } else {
+                        extraCards.forEach(card => card.remove());
+                        extraCards = [];
+                        btn.textContent = `Show more (${remainingItems.length})`;
+                        isExpanded = false;
+                        
+                        // Scroll back to the section title if needed
+                        const sectionTop = container.parentElement.getBoundingClientRect().top + window.scrollY - 80;
+                        window.scrollTo({ top: sectionTop, behavior: 'smooth' });
+                    }
+                });
+            }
         }
     } catch (error) {
         console.error("Error al cargar la sección " + containerId, error);
@@ -424,10 +471,10 @@ function restoreHome() {
     const main = document.getElementById('main-content');
     if (searchInput) searchInput.value = '';
     main.innerHTML = `
-        <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-scroller" id="now-playing-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-scroller" id="trending-movies-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-scroller" id="trending-tv-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Trending People</h2><div class="media-scroller" id="trending-people-list"></div></section>
+        <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-grid" id="now-playing-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-grid" id="trending-movies-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-grid" id="trending-tv-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Trending People</h2><div class="media-grid" id="trending-people-list"></div></section>
         <section class="links-section">
             <h2 class="section-title">Explore More</h2>
             <div class="links-grid">
@@ -643,6 +690,12 @@ function renderMovieDetails(details, mediaType) {
 
     const html = `
         <div class="movie-details-container">
+            <div>
+                <button class="go-back-btn" onclick="restoreHome()" title="Volver al inicio">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Volver
+                </button>
+            </div>
             <div class="movie-header">
                 <img class="movie-poster" src="${poster}" alt="${title}">
                 <div class="movie-info">
@@ -777,13 +830,39 @@ function renderPersonDetails(details) {
         </div>
     ` : '';
 
+    let bioHTML = '<p class="movie-overview" style="margin-top: 16px;">Sin biografía disponible.</p>';
+    if (details.biography) {
+        const paragraphs = details.biography.split('\n').filter(p => p.trim() !== '');
+        const formattedBio = paragraphs.map(p => `<p class="bio-paragraph">${p}</p>`).join('');
+        const isLong = details.biography.length > 400 || paragraphs.length > 2;
+        bioHTML = `
+            <div class="person-biography-container">
+                <div class="person-biography-content ${isLong ? 'collapsed' : 'expanded'}" id="bio-content">
+                    ${formattedBio}
+                </div>
+                ${isLong ? `
+                <button class="read-more-btn" id="read-more-btn">
+                    <span>Read more</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="read-more-icon" style="transition: transform 0.3s ease;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                ` : ''}
+            </div>
+        `;
+    }
+
     const html = `
         <div class="movie-details-container">
+            <div>
+                <button class="go-back-btn" onclick="restoreHome()" title="Volver al inicio">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Volver
+                </button>
+            </div>
             <div class="movie-header">
                 <img class="movie-poster" src="${profile}" alt="${name}">
                 <div class="movie-info">
                     <h1>${name}</h1>
-                    <p class="movie-overview" style="margin-top: 16px;">${details.biography || 'Sin biografía disponible.'}</p>
+                    ${bioHTML}
                     ${extraDetailsHTML}
                     <div class="movie-links-row">
                         ${letterboxdLink}
@@ -805,6 +884,27 @@ function renderPersonDetails(details) {
 
     main.innerHTML = html;
     
+    const readMoreBtn = document.getElementById('read-more-btn');
+    const bioContent = document.getElementById('bio-content');
+    if (readMoreBtn && bioContent) {
+        readMoreBtn.addEventListener('click', () => {
+            const isCollapsed = bioContent.classList.contains('collapsed');
+            const icon = readMoreBtn.querySelector('.read-more-icon');
+            const textSpan = readMoreBtn.querySelector('span');
+            if (isCollapsed) {
+                bioContent.classList.remove('collapsed');
+                bioContent.classList.add('expanded');
+                if(textSpan) textSpan.textContent = 'Show less';
+                if(icon) icon.style.transform = 'rotate(180deg)';
+            } else {
+                bioContent.classList.add('collapsed');
+                bioContent.classList.remove('expanded');
+                if(textSpan) textSpan.textContent = 'Read more';
+                if(icon) icon.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+
     // Add click listeners to 'Known for' items so they open the movie details
     main.querySelectorAll('.cast-card').forEach(card => {
         card.addEventListener('click', async () => {
@@ -822,6 +922,22 @@ function renderPersonDetails(details) {
                 console.error(err);
             }
         });
+    });
+}
+
+// --- Back to top functionality ---
+const backToTopBtn = document.getElementById('back-to-top-btn');
+if (backToTopBtn) {
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 400) {
+            backToTopBtn.classList.add('visible');
+        } else {
+            backToTopBtn.classList.remove('visible');
+        }
+    }, { passive: true });
+
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 

@@ -24,9 +24,9 @@
                 <button class="view-backdrop-btn settings-backdrop-btn" id="settings-backdrop-btn" title="Backdrop Settings">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 </button>
-                <div class="settings-menu" id="backdrop-settings-menu" style="min-width: 320px;">
+                <div class="settings-menu" id="backdrop-settings-menu" style="width: min(100vw - 32px, 320px); max-width: 100%;">
                     <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Source</h4>
-                    <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="radio" name="bg-source" value="theaters" checked>
                             <span>In Theaters</span>
@@ -54,7 +54,10 @@
             <div class="hero-header__glow" aria-hidden="true"></div>
             <div class="hero-header__content">
                 <div class="hero-header__title-wrapper">
-                    <h1 class="hero-header__title neonFlicker">Post Credits</h1>
+                    <h1 class="hero-header__title neonFlicker">
+                        <span>Post</span>
+                        <span>Credits</span>
+                    </h1>
                 </div>
                 <p class="hero-header__subtitle">
                     A modern place to explore credits, scenes, and cast details.
@@ -83,28 +86,28 @@
         <main class="content-grid" aria-label="Main content" id="main-content">
             <section class="media-section">
                 <h2 class="section-title">In Theaters Near You</h2>
-                <div class="media-scroller" id="now-playing-list">
+                <div class="media-grid" id="now-playing-list">
                     <!-- Loaded via JS -->
                 </div>
             </section>
 
             <section class="media-section">
                 <h2 class="section-title">Trending Movies</h2>
-                <div class="media-scroller" id="trending-movies-list">
+                <div class="media-grid" id="trending-movies-list">
                     <!-- Loaded via JS -->
                 </div>
             </section>
 
             <section class="media-section">
                 <h2 class="section-title">Latest Series</h2>
-                <div class="media-scroller" id="trending-tv-list">
+                <div class="media-grid" id="trending-tv-list">
                     <!-- Loaded via JS -->
                 </div>
             </section>
 
             <section class="media-section">
                 <h2 class="section-title">Trending People</h2>
-                <div class="media-scroller" id="trending-people-list">
+                <div class="media-grid" id="trending-people-list">
                     <!-- Loaded via JS -->
                 </div>
             </section>
@@ -136,6 +139,10 @@
         <footer class="site-credits footer-credits">
             Developed by <a href="https://www.diegogarcia-dev.com.ar" target="_blank">dg-dev</a>
         </footer>
+        
+        <button id="back-to-top-btn" class="floating-action-btn back-to-top" title="Volver arriba">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
     </div>
 
     <script src="/Scripts/Main.js" defer></script>
