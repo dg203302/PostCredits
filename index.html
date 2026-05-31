@@ -1,13 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/Styles/Dash.css">
     <link rel="icon" type="image/png" href="/Icons/movie roll.png" sizes="32x32">
     <link rel="manifest" href="manifest.json" />
     <title>PostCredits</title>
 </head>
+
 <body>
     <div class="page-shell">
         <div class="background-carousel" id="backdrop-container"></div>
@@ -19,12 +26,24 @@
             </div>
             <div class="backdrop-controls" style="display: flex; flex-direction: column; gap: 8px; position: relative;">
                 <button class="view-backdrop-btn" id="view-backdrop-btn" title="Toggle Backdrop View">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
                 </button>
-                <button class="view-backdrop-btn settings-backdrop-btn" id="settings-backdrop-btn" title="Backdrop Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <button class="view-backdrop-btn settings-backdrop-btn" id="settings-backdrop-btn"
+                    title="Backdrop Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
                 </button>
-                <div class="settings-menu" id="backdrop-settings-menu" style="width: min(100vw - 32px, 320px); max-width: 100%;">
+                <div class="settings-menu" id="backdrop-settings-menu">
                     <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Source</h4>
                     <div style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -36,14 +55,17 @@
                             <span>My Favorites</span>
                         </label>
                     </div>
-                    
-                    <div id="settings-favorites-list" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: thin;">
+
+                    <div id="settings-favorites-list"
+                        style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: thin;">
                         <!-- Loaded via JS -->
                     </div>
 
                     <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-                        <input type="text" id="settings-mini-search" placeholder="Search to add favorites..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; font-size: 0.9rem;">
-                        <div id="settings-mini-results" style="max-height: 200px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin;">
+                        <input type="text" id="settings-mini-search" placeholder="Search to add favorites..."
+                            style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; font-size: 0.9rem;">
+                        <div id="settings-mini-results"
+                            style="max-height: 200px; overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin;">
                             <!-- Loaded via JS -->
                         </div>
                     </div>
@@ -60,24 +82,20 @@
                     </h1>
                 </div>
                 <p class="hero-header__subtitle">
-                    A modern place to explore credits, scenes, and cast details.
+                    A modern place to explore Movies & Series.
                 </p>
 
-                <form class="search-bar" data-search-form>
-                    <input
-                        id="search-query"
-                        class="search-bar__input"
-                        name="query"
-                        type="search"
-                        placeholder="Search for movies, TV shows, or people..."
-                        autocomplete="off"
-                        spellcheck="false"
-                        data-search-input
-                    >
-                </form>
+                <div class="search-wrapper">
+                    <form class="search-bar" data-search-form id="search-form">
+                        <input id="search-query" class="search-bar__input" name="query" type="search"
+                            placeholder="Search for movies, TV shows, or people..." autocomplete="off"
+                            spellcheck="false" data-search-input>
+                    </form>
+                    <div class="search-history-dropdown" id="search-history-container"></div>
+                </div>
 
             </div>
-            
+
             <div class="site-credits header-credits">
                 Developed by <a href="https://www.diegogarcia-dev.com.ar" target="_blank">dg-dev</a>
             </div>
@@ -115,36 +133,55 @@
             <section class="links-section">
                 <h2 class="section-title">Explore More</h2>
                 <div class="links-grid">
-                    <a href="https://www.themoviedb.org/" target="_blank" class="external-link tmdb" title="The Movie Database">
-                        <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB">
+                    <a href="https://www.themoviedb.org/" target="_blank" class="external-link tmdb"
+                        title="The Movie Database">
+                        <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
+                            alt="TMDB">
                     </a>
-                    <a href="https://letterboxd.com/" target="_blank" class="external-link letterboxd" title="Letterboxd">
+                    <a href="https://letterboxd.com/" target="_blank" class="external-link letterboxd"
+                        title="Letterboxd">
                         <img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd">
                     </a>
                     <a href="https://www.imdb.com/" target="_blank" class="external-link imdb" title="IMDb">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb">
                     </a>
-                    <a href="https://www.rottentomatoes.com/" target="_blank" class="external-link rotten" title="Rotten Tomatoes">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg" alt="Rotten Tomatoes">
+                    <a href="https://www.rottentomatoes.com/" target="_blank" class="external-link rotten"
+                        title="Rotten Tomatoes">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg"
+                            alt="Rotten Tomatoes">
                     </a>
                 </div>
             </section>
         </main>
-        
-        <div class="global-ads-container" style="width: 100%; padding: 20px; display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; justify-content: center; align-items: center; gap: 24px; z-index: 10; position: relative; scrollbar-width: none;">
-            <script async="async" data-cfasync="false" src="https://pl29579098.effectivecpmnetwork.com/5b59996c51c718c2f6769a412bd6c106/invoke.js"></script>
+
+        <div class="global-ads-container"
+            style="width: 100%; padding: 20px; display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; justify-content: center; align-items: center; gap: 24px; z-index: 10; position: relative; scrollbar-width: none;">
+            <script async="async" data-cfasync="false"
+                src="https://pl29579098.effectivecpmnetwork.com/5b59996c51c718c2f6769a412bd6c106/invoke.js"></script>
             <div id="container-5b59996c51c718c2f6769a412bd6c106"></div>
         </div>
 
         <footer class="site-credits footer-credits">
             Developed by <a href="https://www.diegogarcia-dev.com.ar" target="_blank">dg-dev</a>
         </footer>
-        
+
         <button id="back-to-top-btn" class="floating-action-btn back-to-top" title="Volver arriba">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
         </button>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="media-lightbox" class="media-lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightbox-close">&times;</button>
+            <div id="lightbox-body"></div>
+        </div>
     </div>
 
     <script src="/Scripts/Main.js" defer></script>
 </body>
+
 </html>

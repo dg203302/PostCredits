@@ -45,6 +45,101 @@ updateHeaderState();
 window.addEventListener('scroll', updateHeaderState, { passive: true });
 window.addEventListener('resize', updateHeaderState);
 
+// --- Search History ---
+let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+const searchHistoryContainer = document.getElementById('search-history-container');
+
+function renderSearchHistory() {
+    if (!searchHistoryContainer) return;
+    if (searchHistory.length === 0) {
+        searchHistoryContainer.innerHTML = '';
+        return;
+    }
+    searchHistoryContainer.innerHTML = searchHistory.map(item => `
+        <div class="history-item-row" data-query="${item}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>${item}</span>
+        </div>
+    `).join('');
+    
+    searchHistoryContainer.querySelectorAll('.history-item-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const searchInput = document.getElementById('search-query');
+            if (searchInput) {
+                searchInput.value = row.dataset.query;
+                searchInput.dispatchEvent(new Event('input')); // Trigger search
+                searchHistoryContainer.classList.remove('active');
+            }
+        });
+    });
+}
+
+function addToHistory(query) {
+    if (!query) return;
+    searchHistory = searchHistory.filter(item => item.toLowerCase() !== query.toLowerCase());
+    searchHistory.unshift(query);
+    if (searchHistory.length > 6) searchHistory.pop(); // Keep top 6
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+    renderSearchHistory();
+}
+
+// Initial render
+renderSearchHistory();
+
+// Form submit event to save history
+if (searchForm) {
+    searchForm.addEventListener('submit', (e) => {
+        const searchInput = document.getElementById('search-query');
+        if (searchInput) {
+            addToHistory(searchInput.value.trim());
+            searchHistoryContainer.classList.remove('active');
+        }
+    });
+}
+
+// Show/hide dropdown logic
+const searchInputEl = document.getElementById('search-query');
+if (searchInputEl) {
+    searchInputEl.addEventListener('focus', () => {
+        if (searchHistory.length > 0) {
+            searchHistoryContainer.classList.add('active');
+        }
+    });
+    // Re-trigger dropdown if typing causes length > 0
+    searchInputEl.addEventListener('input', () => {
+        if (searchHistory.length > 0 && searchInputEl.value.trim() === '') {
+            searchHistoryContainer.classList.add('active');
+        } else {
+            searchHistoryContainer.classList.remove('active');
+        }
+    });
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) {
+        if (searchHistoryContainer) searchHistoryContainer.classList.remove('active');
+    }
+});
+
+// --- Lightbox Media ---
+window.openLightbox = function(mediaHTML) {
+    const lightbox = document.getElementById('media-lightbox');
+    const body = document.getElementById('lightbox-body');
+    if (!lightbox || !body) return;
+    body.innerHTML = mediaHTML;
+    lightbox.classList.add('active');
+};
+const lightboxEl = document.getElementById('media-lightbox');
+const lightboxCloseEl = document.getElementById('lightbox-close');
+if (lightboxEl) {
+    lightboxEl.addEventListener('click', (e) => {
+        if (e.target === lightboxEl || e.target === lightboxCloseEl) {
+            lightboxEl.classList.remove('active');
+            document.getElementById('lightbox-body').innerHTML = ''; // Stop video
+        }
+    });
+}
+
 // --- TMDB Background Carousel ---
 const TMDB_API_KEY = "ece12ff481fd8f23e34255eadfae14f0";
 const BACKDROP_CONTAINER = document.getElementById('backdrop-container');
@@ -99,14 +194,65 @@ async function fetchLatestBackdrops() {
 
 let carouselInterval;
 
+function extractColorFromUrl(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 50; 
+            canvas.height = 50;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let r = 0, g = 0, b = 0, count = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] + data[i+1] + data[i+2] > 60 && data[i] + data[i+1] + data[i+2] < 700) {
+                    r += data[i];
+                    g += data[i+1];
+                    b += data[i+2];
+                    count++;
+                }
+            }
+            if (count > 0) {
+                r = Math.floor(r / count);
+                g = Math.floor(g / count);
+                b = Math.floor(b / count);
+                const max = Math.max(r, g, b);
+                if (max < 150) {
+                    const factor = 150 / (max || 1);
+                    r = Math.min(255, Math.floor(r * factor));
+                    g = Math.min(255, Math.floor(g * factor));
+                    b = Math.min(255, Math.floor(b * factor));
+                }
+                resolve({r, g, b});
+            } else {
+                resolve({r: 241, g: 245, b: 249});
+            }
+        };
+        img.onerror = () => resolve({r: 241, g: 245, b: 249});
+        img.src = url;
+    });
+}
+
 function initCarousel() {
 	const infoEl = document.getElementById('backdrop-info');
 	const titleEl = document.getElementById('backdrop-title');
 
-	const updateTitle = (index) => {
+	const updateTitle = async (index) => {
 		if (titleEl && backdrops[index]) {
 			titleEl.textContent = backdrops[index].title;
 			if (infoEl) infoEl.classList.add('visible');
+			
+			const smallUrl = backdrops[index].url.replace('original', 'w300');
+			const color = await extractColorFromUrl(smallUrl);
+			const root = document.documentElement;
+			root.style.setProperty('--title-color', `rgb(${Math.min(255, color.r + 80)}, ${Math.min(255, color.g + 80)}, ${Math.min(255, color.b + 80)})`);
+			root.style.setProperty('--title-glow', `rgba(${color.r}, ${color.g}, ${color.b}, 0.7)`);
+			root.style.setProperty('--title-glow-dim', `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`);
+			root.style.setProperty('--title-glow-dimmer', `rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`);
+			root.style.setProperty('--search-bg', `rgba(${color.r}, ${color.g}, ${color.b}, 0.35)`);
 		}
 	};
 
@@ -379,6 +525,7 @@ async function renderSection(endpoint, containerId, params = '') {
                         searchInput.value = title;
                     }
 
+                    saveCurrentState();
                     window.scrollTo({ top: 30, behavior: 'smooth' });
                     
                     try {
@@ -388,7 +535,7 @@ async function renderSection(endpoint, containerId, params = '') {
                             const details = await detailsRes.json();
                             renderPersonDetails(details);
                         } else {
-                            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos`);
+                            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images`);
                             const details = await detailsRes.json();
                             renderMovieDetails(details, type);
                         }
@@ -401,10 +548,13 @@ async function renderSection(endpoint, containerId, params = '') {
             container.querySelectorAll('.media-card').forEach(attachListenerToCard);
 
             if (remainingItems.length > 0) {
+                const showMoreIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+                const showLessIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
+                
                 const btnHTML = `
                     <div class="show-more-wrapper" style="grid-column: 1 / -1; text-align: center; margin-top: 10px; margin-bottom: 10px;">
-                        <button class="go-back-btn show-more-btn" style="position: relative; top: auto; left: auto; margin: 0; box-shadow: none;">
-                            Show more (${remainingItems.length})
+                        <button class="go-back-btn show-more-btn" style="position: relative; top: auto; left: auto; margin: 0; box-shadow: none;" title="Show more">
+                            ${showMoreIcon}
                         </button>
                     </div>
                 `;
@@ -425,12 +575,14 @@ async function renderSection(endpoint, containerId, params = '') {
                             container.insertBefore(card, wrapper);
                             attachListenerToCard(card);
                         });
-                        btn.textContent = 'Show less';
+                        btn.innerHTML = showLessIcon;
+                        btn.title = "Show less";
                         isExpanded = true;
                     } else {
                         extraCards.forEach(card => card.remove());
                         extraCards = [];
-                        btn.textContent = `Show more (${remainingItems.length})`;
+                        btn.innerHTML = showMoreIcon;
+                        btn.title = "Show more";
                         isExpanded = false;
                         
                         // Scroll back to the section title if needed
@@ -467,9 +619,91 @@ if (searchForm) {
 
 let searchTimeout;
 
-function restoreHome() {
+// --- Navigation History ---
+let appHistory = [];
+let savedState = null;
+
+window.saveCurrentState = function() {
+    savedState = {
+        scrollY: window.scrollY,
+        searchValue: searchInput ? searchInput.value : ''
+    };
+};
+
+window.pushNavState = function() {
+    if (!savedState) return;
     const main = document.getElementById('main-content');
-    if (searchInput) searchInput.value = '';
+    const isHome = !!main.querySelector('#now-playing-list');
+    const container = document.createElement('div');
+    while (main.firstChild) {
+        container.appendChild(main.firstChild);
+    }
+    
+    const settingsBtn = document.getElementById('settings-backdrop-btn');
+    const labelEl = document.getElementById('backdrop-label');
+    
+    appHistory.push({
+        node: container,
+        scrollY: savedState.scrollY,
+        searchValue: savedState.searchValue,
+        isHome: isHome,
+        backdrops: typeof backdrops !== 'undefined' ? [...backdrops] : [],
+        settingsBtnDisplay: settingsBtn ? settingsBtn.style.display : '',
+        labelContent: labelEl ? labelEl.textContent : ''
+    });
+    savedState = null;
+};
+
+window.goBack = function() {
+    if (appHistory.length > 0) {
+        const prevState = appHistory.pop();
+        const main = document.getElementById('main-content');
+        main.innerHTML = '';
+        while (prevState.node.firstChild) {
+            main.appendChild(prevState.node.firstChild);
+        }
+        
+        if (prevState.isHome) {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.blur();
+            }
+            const searchHistoryContainer = document.getElementById('search-history');
+            if (searchHistoryContainer) {
+                searchHistoryContainer.classList.remove('active');
+            }
+            fetchLatestBackdrops();
+        } else {
+            if (searchInput) {
+                searchInput.value = prevState.searchValue;
+            }
+            if (prevState.backdrops && prevState.backdrops.length > 0) {
+                backdrops = prevState.backdrops;
+                initCarousel();
+                const settingsBtn = document.getElementById('settings-backdrop-btn');
+                if (settingsBtn) settingsBtn.style.display = prevState.settingsBtnDisplay;
+                const labelEl = document.getElementById('backdrop-label');
+                if (labelEl) labelEl.textContent = prevState.labelContent;
+            }
+        }
+        
+        window.scrollTo({ top: prevState.scrollY, behavior: 'instant' });
+    } else {
+        restoreHome();
+    }
+};
+
+window.restoreHome = function() {
+    appHistory = [];
+    const main = document.getElementById('main-content');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.blur();
+    }
+    const searchHistoryContainer = document.getElementById('search-history');
+    if (searchHistoryContainer) {
+        searchHistoryContainer.classList.remove('active');
+    }
     main.innerHTML = `
         <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-grid" id="now-playing-list"></div></section>
         <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-grid" id="trending-movies-list"></div></section>
@@ -520,6 +754,7 @@ if (searchInput) {
 
         searchTimeout = setTimeout(async () => {
             try {
+                appHistory = [];
                 window.scrollTo({ top: 30, behavior: 'smooth' });
                 const lang = navigator.language || 'es-MX';
                 const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&language=${lang}&query=${encodeURIComponent(query)}&page=1`);
@@ -580,7 +815,9 @@ if (searchInput) {
                                 if (searchInput) {
                                     searchInput.value = title;
                                 }
+                                addToHistory(query);
 
+                                saveCurrentState();
                                 window.scrollTo({ top: 30, behavior: 'smooth' });
                                 try {
                                     if (type === 'person') {
@@ -588,7 +825,7 @@ if (searchInput) {
                                         const details = await detailsRes.json();
                                         renderPersonDetails(details);
                                     } else {
-                                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos`);
+                                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images`);
                                         const details = await detailsRes.json();
                                         renderMovieDetails(details, type);
                                     }
@@ -611,16 +848,29 @@ if (searchInput) {
 }
 
 function renderMovieDetails(details, mediaType) {
+    pushNavState();
     const main = document.getElementById('main-content');
     
     const title = details.title || details.name;
     const year = (details.release_date || details.first_air_date || '').split('-')[0];
     const poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
     
-    // Meta data (Géneros, Duración, Puntuación)
-    const genres = details.genres ? details.genres.map(g => `<span>${g.name}</span>`).join('') : '';
-    const runtime = details.runtime ? `<span>${details.runtime} min</span>` : (details.episode_run_time && details.episode_run_time[0] ? `<span>${details.episode_run_time[0]} min</span>` : '');
-    const rating = details.vote_average ? `<span>⭐ ${details.vote_average.toFixed(1)}/10</span>` : '';
+    // Meta data
+    const genres = details.genres ? details.genres.map(g => `<span class="cinematic-genre">${g.name}</span>`).join('') : '';
+    const runtimeStr = details.runtime ? `${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m` : (details.episode_run_time && details.episode_run_time[0] ? `${details.episode_run_time[0]}m` : '');
+    const language = details.spoken_languages && details.spoken_languages.length > 0 ? details.spoken_languages[0].english_name : (details.original_language ? details.original_language.toUpperCase() : '');
+    
+    const metaLineItems = [year, runtimeStr, language ? `Language : ${language}` : ''].filter(Boolean);
+    const metaLine = metaLineItems.join(' | ');
+
+    let director = '';
+    if (details.credits && details.credits.crew) {
+        const dirObj = details.credits.crew.find(c => c.job === 'Director' || c.job === 'Executive Producer' || c.job === 'Series Director');
+        if (dirObj) director = `Directed by : <span class="clickable-person" data-id="${dirObj.id}">${dirObj.name}</span>`;
+    }
+
+    const ratingRaw = details.vote_average || 0;
+    const ratingStr = ratingRaw > 0 ? ratingRaw.toFixed(1) : 'NR';
 
     // Enlaces externos
     const imdbLink = details.external_ids && details.external_ids.imdb_id ? `<a href="https://www.imdb.com/title/${details.external_ids.imdb_id}" target="_blank" class="link-btn imdb" title="IMDb"><img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb"></a>` : '';
@@ -629,113 +879,179 @@ function renderMovieDetails(details, mediaType) {
         letterboxdLink = `<a href="https://letterboxd.com/tmdb/${details.id}" target="_blank" class="link-btn letterboxd" title="Letterboxd"><img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd"></a>`;
     }
     const tmdbLink = `<a href="https://www.themoviedb.org/${mediaType}/${details.id}" target="_blank" class="link-btn tmdb-link" title="TMDB"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB"></a>`;
+    const favClass = isFavorite(details.id) ? 'active' : '';
+    const favButton = `<button class="fav-btn ${favClass}" id="fav-btn" data-id="${details.id}" title="Toggle Favorite"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>`;
 
-    // Reparto (Cast)
-    let castHTML = '';
+    // Rating Circle (replacing laurels)
+    const ratingHTML = `
+        <div class="cinematic-rating-circle" style="transform: scale(0.8); transform-origin: left center; margin: 0;">
+            <svg viewBox="0 0 36 36" class="circular-chart yellow">
+                <path class="circle-bg"
+                d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path class="circle"
+                stroke-dasharray="${ratingRaw * 10}, 100"
+                d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <text x="18" y="20.35" class="percentage">${ratingStr}</text>
+            </svg>
+            <span class="rating-label" style="display: block; text-align: center; margin-top: 5px; font-weight: bold; font-size: 1.2rem;">TMDB</span>
+        </div>
+    `;
+
+    // Tagline / Quote
+    const quoteText = details.tagline || 'A THRILLING ADVENTURE THAT WILL KEEP YOU ON EDGE.';
+
+    // Synopsis Heading
+    let overviewParts = (details.overview || 'A journey begins.').split('. ');
+    let synopsisHeading = overviewParts[0] ? overviewParts[0].toUpperCase() + '.' : 'THE TELLING OF TWO INTERTWINING LIVES.';
+    let overviewRest = overviewParts.slice(1).join('. ');
+    if(!overviewRest) overviewRest = details.overview || 'Sin descripción disponible.';
+
+    // Media (Trailers & Captures)
+    let trailerKey = '';
+    if (details.videos && details.videos.results) {
+        const trailer = details.videos.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+        if (trailer) trailerKey = trailer.key;
+    }
+    let backdrops = [];
+    if (details.images && details.images.backdrops) {
+        backdrops = details.images.backdrops.slice(0, 4);
+    }
+    
+    let leftImg = backdrops[0] ? `https://image.tmdb.org/t/p/w780${backdrops[0].file_path}` : poster;
+    let rightImg = backdrops[1] ? `https://image.tmdb.org/t/p/w780${backdrops[1].file_path}` : poster;
+    let centerMedia = '';
+    if (trailerKey) {
+        centerMedia = `
+            <div class="logan-media-center">
+                <iframe src="https://www.youtube.com/embed/${trailerKey}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        `;
+    } else if (backdrops[2]) {
+        centerMedia = `
+            <div class="logan-media-center" onclick="openLightbox('<img src=\\'https://image.tmdb.org/t/p/w1280${backdrops[2].file_path}\\'>')" style="cursor: pointer;">
+                <img src="https://image.tmdb.org/t/p/w1280${backdrops[2].file_path}" alt="Capture">
+                <div class="media-overlay-text">
+                    <h3>SCENE CAPTURE</h3>
+                    <p>${title}</p>
+                </div>
+            </div>
+        `;
+    } else {
+        centerMedia = `
+            <div class="logan-media-center" onclick="openLightbox('<img src=\\'${poster}\\'>')" style="cursor: pointer;">
+                <img src="${poster}" alt="Poster" style="object-fit: contain;">
+            </div>
+        `;
+    }
+
+    // News/Cast
+    let newsHTML = '';
     if (details.credits && details.credits.cast) {
-        const topCast = details.credits.cast.slice(0, 15);
-        castHTML = topCast.map(actor => {
-            const actorImg = actor.profile_path ? `https://image.tmdb.org/t/p/w200${actor.profile_path}` : 'https://via.placeholder.com/200x300?text=No+Image';
+        const topCast = details.credits.cast.slice(0, 2);
+        newsHTML = topCast.map(actor => {
+            const img = actor.profile_path ? `https://image.tmdb.org/t/p/h632${actor.profile_path}` : poster;
             return `
-                <div class="media-card cast-card" data-id="${actor.id}" data-type="person" data-title="${actor.name.replace(/"/g, '&quot;')}">
-                    <img src="${actorImg}" alt="${actor.name}" loading="lazy">
-                    <div class="title-overlay">
-                        <p class="cast-name">${actor.name}</p>
-                        <p class="cast-char">${actor.character}</p>
+                <div class="logan-news-card clickable-person" data-id="${actor.id}">
+                    <img src="${img}" alt="${actor.name}">
+                    <div class="logan-news-card-content">
+                        <span class="tag">CAST</span> <span class="date">FEATURED</span>
+                        <h2>${actor.name.toUpperCase()} AS ${actor.character ? actor.character.toUpperCase() : 'STAR'}</h2>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    // Trailers
-    let trailersHTML = '';
-    if (details.videos && details.videos.results) {
-        // Filtrar trailers oficiales de YouTube
-        const trailers = details.videos.results.filter(v => v.site === 'YouTube' && v.type === 'Trailer');
-        if (trailers.length > 0) {
-            const topTrailers = trailers.slice(0, 2);
-            trailersHTML = topTrailers.map(trailer => `
-                <div class="trailer-wrapper">
-                    <iframe 
-                        src="https://www.youtube.com/embed/${trailer.key}?controls=1&modestbranding=1&rel=0" 
-                        title="${trailer.name}" 
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen>
-                    </iframe>
-                </div>
-            `).join('');
-        }
-    }
-
-    // Additional info grid
-    const formatCurrency = (val) => val ? `$${(val / 1000000).toFixed(1)}M` : '';
-    const extraDetailsList = [];
-    if (details.status) extraDetailsList.push(`<div class="info-item"><span class="info-label">Status</span><span class="info-value">${details.status}</span></div>`);
-    if (details.original_language) extraDetailsList.push(`<div class="info-item"><span class="info-label">Language</span><span class="info-value">${details.original_language.toUpperCase()}</span></div>`);
-    if (details.budget) extraDetailsList.push(`<div class="info-item"><span class="info-label">Budget</span><span class="info-value">${formatCurrency(details.budget)}</span></div>`);
-    if (details.revenue) extraDetailsList.push(`<div class="info-item"><span class="info-label">Revenue</span><span class="info-value">${formatCurrency(details.revenue)}</span></div>`);
-    if (details.number_of_seasons) extraDetailsList.push(`<div class="info-item"><span class="info-label">Seasons</span><span class="info-value">${details.number_of_seasons}</span></div>`);
-    if (details.number_of_episodes) extraDetailsList.push(`<div class="info-item"><span class="info-label">Episodes</span><span class="info-value">${details.number_of_episodes}</span></div>`);
-
-    const extraDetailsHTML = extraDetailsList.length > 0 ? `
-        <div class="movie-extra-grid">
-            ${extraDetailsList.join('')}
-        </div>
-    ` : '';
-
-    const favClass = isFavorite(details.id) ? 'active' : '';
-    const favButton = `<button class="fav-btn ${favClass}" id="fav-btn" data-id="${details.id}" title="Toggle Favorite"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>`;
+    const isBackButton = appHistory.length > 0;
+    const btnAction = isBackButton ? 'goBack()' : 'restoreHome()';
+    const btnTitle = isBackButton ? 'Volver atrás' : 'Volver al inicio';
+    const btnIcon = isBackButton 
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>` 
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
 
     const html = `
-        <div class="movie-details-container">
-            <div>
-                <button class="go-back-btn" onclick="restoreHome()" title="Volver al inicio">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    Volver
-                </button>
-            </div>
-            <div class="movie-header">
-                <img class="movie-poster" src="${poster}" alt="${title}">
-                <div class="movie-info">
-                    <h1>${title} ${year ? `(${year})` : ''}</h1>
-                    ${details.tagline ? `<p class="movie-tagline">"${details.tagline}"</p>` : ''}
-                    <div class="movie-meta">
-                        ${rating}
-                        ${runtime}
-                        ${genres}
-                    </div>
-                    <p class="movie-overview">${details.overview || 'Sin descripción disponible.'}</p>
-                    ${extraDetailsHTML}
-                    <div class="movie-links-row">
-                        ${favButton}
-                        ${letterboxdLink}
-                        ${imdbLink}
-                        ${tmdbLink}
+        <div class="movie-details-container cinematic-view">
+            <button class="go-back-btn" onclick="${btnAction}" title="${btnTitle}">
+                ${btnIcon}
+            </button>
+            <div class="cinematic-hero-overlay"></div>
+            
+            <div class="cinematic-hero-content">
+                <img class="cinematic-hero-poster-bg" src="${poster}" alt="">
+                <h1 class="cinematic-title-logan">${title.toUpperCase()}</h1>
+                
+                <div class="cinematic-quote-section">
+                    <p class="cinematic-quote">"${quoteText}"</p>
+                    <div class="cinematic-laurels">
+                        ${ratingHTML}
                     </div>
                 </div>
             </div>
-            ${trailersHTML ? `
-            <div class="movie-trailers-section" style="margin-top: 32px;">
-                <h2 class="section-title">Trailers</h2>
-                <div class="trailers-grid">
-                    ${trailersHTML}
+
+            <div class="logan-synopsis-section">
+                <div class="logan-synopsis-left">
+                    <h4>SYNOPSIS</h4>
+                    <h2>${synopsisHeading}</h2>
+                </div>
+                <div class="logan-synopsis-right">
+                    <p>${overviewRest}</p>
+                </div>
+            </div>
+
+            <div class="logan-media-section">
+                <img class="logan-media-side" src="${leftImg}" alt="Scene" onclick="openLightbox('<img src=\\'${leftImg}\\'>')" style="cursor: pointer;">
+                ${centerMedia}
+                <img class="logan-media-side" src="${rightImg}" alt="Scene" onclick="openLightbox('<img src=\\'${rightImg}\\'>')" style="cursor: pointer;">
+            </div>
+
+            ${newsHTML ? `
+            <div class="logan-news-section">
+                <h4>CAST & CREW</h4>
+                <div class="logan-news-grid">
+                    ${newsHTML}
                 </div>
             </div>
             ` : ''}
-            ${castHTML ? `
-            <div class="movie-cast-section" style="margin-top: 24px;">
-                <h2 class="section-title">Cast / Reparto</h2>
-                <div class="media-scroller">
-                    ${castHTML}
+
+            <div class="logan-footer-info">
+                <div class="director-info">
+                    ${director ? `<span>${director}</span>` : `<span>${title}</span>`}
+                </div>
+                <div class="movie-links-row">
+                    ${favButton}
+                    ${letterboxdLink}
+                    ${imdbLink}
+                    ${tmdbLink}
                 </div>
             </div>
-            ` : ''}
         </div>
     `;
 
     main.innerHTML = html;
+    
+    // Extract and apply poster color
+    if (details.poster_path) {
+        const smallPoster = `https://image.tmdb.org/t/p/w300${details.poster_path}`;
+        extractColorFromUrl(smallPoster).then(color => {
+            const rgbColor = `rgb(${Math.min(255, color.r + 40)}, ${Math.min(255, color.g + 40)}, ${Math.min(255, color.b + 40)})`;
+            const titleEl = main.querySelector('.cinematic-title-logan');
+            const quoteEl = main.querySelector('.cinematic-quote');
+            if (titleEl) {
+                titleEl.style.color = rgbColor;
+                titleEl.style.transition = 'color 0.5s ease';
+            }
+            if (quoteEl) {
+                quoteEl.style.color = rgbColor;
+                quoteEl.style.transition = 'color 0.5s ease';
+            }
+        });
+    }
     
     const favBtnEl = document.getElementById('fav-btn');
     if (favBtnEl) {
@@ -753,6 +1069,24 @@ function renderMovieDetails(details, mediaType) {
             }
         });
     }
+
+    // Attach listeners for clickable people
+    main.querySelectorAll('.clickable-person').forEach(el => {
+        el.addEventListener('click', async () => {
+            const personId = el.dataset.id;
+            const lang = navigator.language || 'es-MX';
+            saveCurrentState();
+            window.scrollTo({ top: 30, behavior: 'smooth' });
+            try {
+                const detailsRes = await fetch(`https://api.themoviedb.org/3/person/${personId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=combined_credits,external_ids`);
+                const personDetails = await detailsRes.json();
+                renderPersonDetails(personDetails);
+            } catch(err) {
+                console.error(err);
+            }
+        });
+    });
+
     // Cargar backdrops específicos de la película
     loadMovieBackdrops(details.id, mediaType, title);
 
@@ -762,6 +1096,7 @@ function renderMovieDetails(details, mediaType) {
             const id = card.dataset.id;
             const cardTitle = card.dataset.title;
             if (searchInput) searchInput.value = cardTitle;
+            saveCurrentState();
             window.scrollTo({ top: 30, behavior: 'smooth' });
             try {
                 const lang = navigator.language || 'es-MX';
@@ -776,6 +1111,7 @@ function renderMovieDetails(details, mediaType) {
 }
 
 function renderPersonDetails(details) {
+    pushNavState();
     const main = document.getElementById('main-content');
     
     const name = details.name;
@@ -791,98 +1127,183 @@ function renderPersonDetails(details) {
     const letterboxdLink = `<a href="https://letterboxd.com/search/${encodeURIComponent(name)}/" target="_blank" class="link-btn letterboxd" title="Letterboxd"><img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd"></a>`;
     const tmdbLink = `<a href="https://www.themoviedb.org/person/${details.id}" target="_blank" class="link-btn tmdb-link" title="TMDB"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB"></a>`;
 
-    // Known For
-    let knownForHTML = '';
+    // Tagline / Quote
+    const quoteText = details.known_for_department ? `KNOWN FOR: ${details.known_for_department.toUpperCase()}` : 'A CINEMATIC ICON';
+
+    // Popularity Circle (replacing laurels)
+    const popularityRaw = Math.min(details.popularity || 0, 100);
+    const popularityStr = popularityRaw.toFixed(1);
+    const ratingHTML = `
+        <div class="cinematic-rating-circle" style="transform: scale(0.8); transform-origin: left center; margin: 0;">
+            <svg viewBox="0 0 36 36" class="circular-chart yellow">
+                <path class="circle-bg"
+                d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path class="circle"
+                stroke-dasharray="${popularityRaw}, 100"
+                d="M18 2.0845
+                    a 15.9155 15.9155 0 0 1 0 31.831
+                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <text x="18" y="20.35" class="percentage">${popularityStr}</text>
+            </svg>
+            <span class="rating-label" style="display: block; text-align: center; margin-top: 5px; font-weight: bold; font-size: 1.2rem;">POPULARITY</span>
+        </div>
+    `;
+
+    // Synopsis Right
+    let overviewRest = details.biography || 'Sin biografía disponible.';
+    let isLongBio = false;
+    if (overviewRest.length > 500) {
+        isLongBio = true;
+        overviewRest = `
+            <div class="person-biography-content collapsed" id="bio-content">
+                ${overviewRest.replace(/\n/g, '<br><br>')}
+            </div>
+            <button class="read-more-btn" id="read-more-btn" style="background:transparent;border:none;color:#ffb703;cursor:pointer;margin-top:15px;font-weight:bold;">
+                <span>Read more</span>
+            </button>
+        `;
+    } else {
+        overviewRest = overviewRest.replace(/\n/g, '<br><br>');
+    }
+
+    // Media (from combined_credits)
+    let topCreditsMedia = [];
     if (details.combined_credits && details.combined_credits.cast) {
-        // Ordenar por popularidad y mostrar los 15 mejores
-        const topCredits = details.combined_credits.cast
-            .sort((a, b) => b.popularity - a.popularity)
-            .slice(0, 15);
-            
-        knownForHTML = topCredits.map(credit => {
-            const creditTitle = credit.title || credit.name;
-            const creditImg = credit.poster_path ? `https://image.tmdb.org/t/p/w200${credit.poster_path}` : 'https://via.placeholder.com/200x300?text=No+Image';
-            const creditType = credit.media_type || 'movie';
-            
+        topCreditsMedia = details.combined_credits.cast
+            .filter(c => c.backdrop_path)
+            .sort((a,b) => b.popularity - a.popularity)
+            .slice(0, 3);
+    }
+    
+    let leftImg = topCreditsMedia[0] ? `https://image.tmdb.org/t/p/w780${topCreditsMedia[0].backdrop_path}` : profile;
+    let rightImg = topCreditsMedia[1] ? `https://image.tmdb.org/t/p/w780${topCreditsMedia[1].backdrop_path}` : profile;
+    let centerMedia = '';
+    if (topCreditsMedia[2]) {
+        centerMedia = `
+            <div class="logan-media-center" onclick="openLightbox('<img src=\\'https://image.tmdb.org/t/p/w1280${topCreditsMedia[2].backdrop_path}\\'>')" style="cursor: pointer;">
+                <img src="https://image.tmdb.org/t/p/w1280${topCreditsMedia[2].backdrop_path}" alt="Capture">
+                <div class="media-overlay-text">
+                    <h3>SCENE CAPTURE</h3>
+                    <p>${topCreditsMedia[2].title || topCreditsMedia[2].name}</p>
+                </div>
+            </div>
+        `;
+    } else {
+        centerMedia = `
+            <div class="logan-media-center" onclick="openLightbox('<img src=\\'${profile}\\'>')" style="cursor: pointer;">
+                <img src="${profile}" alt="Profile" style="object-fit: contain;">
+            </div>
+        `;
+    }
+
+    // News/Cast (Known For large cards)
+    let newsHTML = '';
+    if (details.combined_credits && details.combined_credits.cast) {
+        const topCastCredits = details.combined_credits.cast
+            .sort((a,b) => b.popularity - a.popularity)
+            .slice(0, 2);
+        newsHTML = topCastCredits.map(credit => {
+            const img = credit.backdrop_path ? `https://image.tmdb.org/t/p/w780${credit.backdrop_path}` : profile;
+            const date = (credit.release_date || credit.first_air_date || '').split('-')[0];
             return `
-                <div class="media-card cast-card" data-id="${credit.id}" data-type="${creditType}" data-title="${creditTitle.replace(/"/g, '&quot;')}">
-                    <img src="${creditImg}" alt="${creditTitle}" loading="lazy">
-                    <div class="title-overlay">
-                        <p class="cast-name">${creditTitle}</p>
-                        <p class="cast-char">${credit.character || ''}</p>
+                <div class="logan-news-card cast-card" data-id="${credit.id}" data-type="${credit.media_type || 'movie'}" data-title="${(credit.title || credit.name).replace(/"/g, '&quot;')}">
+                    <img src="${img}" alt="${credit.title || credit.name}">
+                    <div class="logan-news-card-content">
+                        <span class="tag">KNOWN FOR</span> <span class="date">${date}</span>
+                        <h2>${(credit.title || credit.name).toUpperCase()}</h2>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    // Extra info grid
-    const extraDetailsList = [];
-    if (details.known_for_department) extraDetailsList.push(`<div class="info-item"><span class="info-label">Known For</span><span class="info-value">${details.known_for_department}</span></div>`);
-    if (details.gender) extraDetailsList.push(`<div class="info-item"><span class="info-label">Gender</span><span class="info-value">${details.gender === 1 ? 'Female' : details.gender === 2 ? 'Male' : 'Unknown'}</span></div>`);
-    if (details.birthday) extraDetailsList.push(`<div class="info-item"><span class="info-label">Born</span><span class="info-value">${details.birthday}</span></div>`);
-    if (details.deathday) extraDetailsList.push(`<div class="info-item"><span class="info-label">Died</span><span class="info-value">${details.deathday}</span></div>`);
-    if (details.place_of_birth) extraDetailsList.push(`<div class="info-item"><span class="info-label">Birthplace</span><span class="info-value">${details.place_of_birth}</span></div>`);
-
-    const extraDetailsHTML = extraDetailsList.length > 0 ? `
-        <div class="movie-extra-grid">
-            ${extraDetailsList.join('')}
-        </div>
-    ` : '';
-
-    let bioHTML = '<p class="movie-overview" style="margin-top: 16px;">Sin biografía disponible.</p>';
-    if (details.biography) {
-        const paragraphs = details.biography.split('\n').filter(p => p.trim() !== '');
-        const formattedBio = paragraphs.map(p => `<p class="bio-paragraph">${p}</p>`).join('');
-        const isLong = details.biography.length > 400 || paragraphs.length > 2;
-        bioHTML = `
-            <div class="person-biography-container">
-                <div class="person-biography-content ${isLong ? 'collapsed' : 'expanded'}" id="bio-content">
-                    ${formattedBio}
-                </div>
-                ${isLong ? `
-                <button class="read-more-btn" id="read-more-btn">
-                    <span>Read more</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="read-more-icon" style="transition: transform 0.3s ease;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                ` : ''}
-            </div>
-        `;
-    }
+    const isBackButton = appHistory.length > 0;
+    const btnAction = isBackButton ? 'goBack()' : 'restoreHome()';
+    const btnTitle = isBackButton ? 'Volver atrás' : 'Volver al inicio';
+    const btnIcon = isBackButton 
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>` 
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
 
     const html = `
-        <div class="movie-details-container">
-            <div>
-                <button class="go-back-btn" onclick="restoreHome()" title="Volver al inicio">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    Volver
-                </button>
-            </div>
-            <div class="movie-header">
-                <img class="movie-poster" src="${profile}" alt="${name}">
-                <div class="movie-info">
-                    <h1>${name}</h1>
-                    ${bioHTML}
-                    ${extraDetailsHTML}
-                    <div class="movie-links-row">
-                        ${letterboxdLink}
-                        ${imdbLink}
-                        ${tmdbLink}
+        <div class="movie-details-container cinematic-view">
+            <button class="go-back-btn" onclick="${btnAction}" title="${btnTitle}">
+                ${btnIcon}
+            </button>
+            <div class="cinematic-hero-overlay"></div>
+            
+            <div class="cinematic-hero-content">
+                <img class="cinematic-hero-poster-bg" src="${profile}" alt="">
+                <h1 class="cinematic-title-logan" style="font-size: clamp(3rem, 10vw, 8rem);">${name.toUpperCase()}</h1>
+                
+                <div class="cinematic-quote-section">
+                    <p class="cinematic-quote">"${quoteText}"</p>
+                    <div class="cinematic-laurels">
+                        ${ratingHTML}
                     </div>
                 </div>
             </div>
-            ${knownForHTML ? `
-            <div class="movie-cast-section" style="margin-top: 24px;">
-                <h2 class="section-title">Known For / Conocido por</h2>
-                <div class="media-scroller">
-                    ${knownForHTML}
+
+            <div class="logan-synopsis-section">
+                <div class="logan-synopsis-left">
+                    <h4>ABOUT</h4>
+                    <h2>THE LIFE AND WORK OF A TALENT.</h2>
+                </div>
+                <div class="logan-synopsis-right">
+                    ${overviewRest}
+                </div>
+            </div>
+
+            <div class="logan-media-section">
+                <img class="logan-media-side" src="${leftImg}" alt="Scene" onclick="openLightbox('<img src=\\'${leftImg}\\'>')" style="cursor: pointer;">
+                ${centerMedia}
+                <img class="logan-media-side" src="${rightImg}" alt="Scene" onclick="openLightbox('<img src=\\'${rightImg}\\'>')" style="cursor: pointer;">
+            </div>
+
+            ${newsHTML ? `
+            <div class="logan-news-section">
+                <h4>NOTABLE WORKS</h4>
+                <div class="logan-news-grid">
+                    ${newsHTML}
                 </div>
             </div>
             ` : ''}
+
+            <div class="logan-footer-info">
+                <div class="director-info">
+                    <span>${name}</span>
+                </div>
+                <div class="movie-links-row">
+                    ${letterboxdLink}
+                    ${imdbLink}
+                    ${tmdbLink}
+                </div>
+            </div>
         </div>
     `;
 
     main.innerHTML = html;
+    
+    // Extract and apply profile color
+    if (details.profile_path) {
+        const smallPoster = `https://image.tmdb.org/t/p/w300${details.profile_path}`;
+        extractColorFromUrl(smallPoster).then(color => {
+            const rgbColor = `rgb(${Math.min(255, color.r + 40)}, ${Math.min(255, color.g + 40)}, ${Math.min(255, color.b + 40)})`;
+            const titleEl = main.querySelector('.cinematic-title-logan');
+            const quoteEl = main.querySelector('.cinematic-quote');
+            if (titleEl) {
+                titleEl.style.color = rgbColor;
+                titleEl.style.transition = 'color 0.5s ease';
+            }
+            if (quoteEl) {
+                quoteEl.style.color = rgbColor;
+                quoteEl.style.transition = 'color 0.5s ease';
+            }
+        });
+    }
     
     const readMoreBtn = document.getElementById('read-more-btn');
     const bioContent = document.getElementById('bio-content');
@@ -912,10 +1333,11 @@ function renderPersonDetails(details) {
             const type = card.dataset.type;
             const creditTitle = card.dataset.title;
             if (searchInput) searchInput.value = creditTitle;
+            saveCurrentState();
             window.scrollTo({ top: 30, behavior: 'smooth' });
             try {
                 const lang = navigator.language || 'es-MX';
-                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos`);
+                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images`);
                 const creditDetails = await detailsRes.json();
                 renderMovieDetails(creditDetails, type);
             } catch(err) {
