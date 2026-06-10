@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -25,6 +25,18 @@
                 <span class="title" id="backdrop-title"></span>
             </div>
             <div class="backdrop-controls" style="display: flex; flex-direction: column; gap: 8px; position: relative;">
+                <button class="view-backdrop-btn roulette-backdrop-btn" id="roulette-backdrop-btn"
+                    title="Cine-Roulette (Decide for me!)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8" cy="8" r="1.5" fill="currentColor"></circle>
+                        <circle cx="16" cy="16" r="1.5" fill="currentColor"></circle>
+                        <circle cx="16" cy="8" r="1.5" fill="currentColor"></circle>
+                        <circle cx="8" cy="16" r="1.5" fill="currentColor"></circle>
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
+                    </svg>
+                </button>
                 <button class="view-backdrop-btn" id="view-backdrop-btn" title="Toggle Backdrop View">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -44,24 +56,66 @@
                     </svg>
                 </button>
                 <div class="settings-menu" id="backdrop-settings-menu">
+                    <button class="settings-close-btn" id="settings-close-btn" aria-label="Close Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                     <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Source</h4>
-                    <div style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <div class="segmented-control" style="margin-bottom: 16px;">
+                        <label class="control-item">
                             <input type="radio" name="bg-source" value="theaters" checked>
                             <span>In Theaters</span>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <label class="control-item">
                             <input type="radio" name="bg-source" value="favorites">
                             <span>My Favorites</span>
                         </label>
                     </div>
 
                     <div id="settings-favorites-list"
-                        style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: thin;">
+                        style="display: flex; gap: 12px; overflow-x: auto; padding: 4px 12px 12px 4px; margin-bottom: 12px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
                         <!-- Loaded via JS -->
                     </div>
 
-                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                    <div id="backdrop-order-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px; display: none;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Order</h4>
+                        <div class="segmented-control">
+                            <label class="control-item">
+                                <input type="radio" name="bg-order" value="default" checked>
+                                <span>Default</span>
+                            </label>
+                            <label class="control-item">
+                                <input type="radio" name="bg-order" value="random">
+                                <span>Random</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="backdrop-speed-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Transition Speed</h4>
+                        <div class="segmented-control">
+                            <label class="control-item">
+                                <input type="radio" name="bg-speed" value="2000">
+                                <span>2s</span>
+                            </label>
+                            <label class="control-item">
+                                <input type="radio" name="bg-speed" value="6000" checked>
+                                <span>6s</span>
+                            </label>
+                            <label class="control-item">
+                                <input type="radio" name="bg-speed" value="10000">
+                                <span>10s</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="download-backdrop-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px;">
+                        <button id="download-backdrop-btn" class="settings-action-btn" type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Download Current Backdrop</span>
+                        </button>
+                    </div>
+
+                    <div id="settings-favorites-search" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
                         <input type="text" id="settings-mini-search" placeholder="Search to add favorites..."
                             style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; font-size: 0.9rem;">
                         <div id="settings-mini-results"
@@ -124,8 +178,15 @@
             </section>
 
             <section class="media-section">
-                <h2 class="section-title">Trending People</h2>
-                <div class="media-grid" id="trending-people-list">
+                <h2 class="section-title">Popular Trailers</h2>
+                <div class="media-grid-trailers" id="popular-trailers-list">
+                    <!-- Loaded via JS -->
+                </div>
+            </section>
+
+            <section class="media-section">
+                <h2 class="section-title">Latest Industry News</h2>
+                <div class="news-grid-home" id="industry-news-list">
                     <!-- Loaded via JS -->
                 </div>
             </section>
@@ -171,6 +232,65 @@
                 <polyline points="18 15 12 9 6 15"></polyline>
             </svg>
         </button>
+    </div>
+
+    <!-- Cine-Roulette Modal -->
+    <div id="roulette-modal" class="roulette-modal">
+        <div class="roulette-modal-content">
+            <button class="roulette-close-btn" id="roulette-close-btn" aria-label="Close Roulette">&times;</button>
+            <h2 class="roulette-modal-title">CINE-ROULETTE</h2>
+            <p class="roulette-modal-subtitle">Can't decide what to watch? Let the movie gods choose!</p>
+            
+            <div class="roulette-genre-selector">
+                <span class="genre-selector-label">Filter by Genre:</span>
+                <select id="roulette-genre-select" class="roulette-select">
+                    <option value="">All Genres</option>
+                    <option value="28">Action</option>
+                    <option value="12">Adventure</option>
+                    <option value="16">Animation</option>
+                    <option value="35">Comedy</option>
+                    <option value="80">Crime</option>
+                    <option value="99">Documentary</option>
+                    <option value="18">Drama</option>
+                    <option value="10751">Family</option>
+                    <option value="14">Fantasy</option>
+                    <option value="36">History</option>
+                    <option value="27">Horror</option>
+                    <option value="10402">Music</option>
+                    <option value="9648">Mystery</option>
+                    <option value="10749">Romance</option>
+                    <option value="878">Sci-Fi</option>
+                    <option value="53">Thriller</option>
+                    <option value="10752">War</option>
+                    <option value="37">Western</option>
+                </select>
+            </div>
+            
+            <div class="roulette-wheel-container">
+                <div class="roulette-pointer"></div>
+                <div class="roulette-track" id="roulette-track">
+                    <!-- Posters spinning horizontally -->
+                </div>
+            </div>
+            
+            <button class="roulette-spin-btn" id="roulette-spin-btn">SPIN THE WHEEL</button>
+            
+            <!-- Winner details card -->
+            <div id="roulette-winner-card" class="roulette-winner-card">
+                <!-- Winner poster and details render dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Actor Profile Drawer -->
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <div id="actor-drawer" class="actor-drawer">
+        <div class="actor-drawer-content">
+            <button class="actor-drawer-close" id="actor-drawer-close" aria-label="Close Profile">&times;</button>
+            <div id="actor-drawer-body">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
     </div>
 
     <!-- Lightbox Modal -->

@@ -145,6 +145,42 @@ const TMDB_API_KEY = "ece12ff481fd8f23e34255eadfae14f0";
 const BACKDROP_CONTAINER = document.getElementById('backdrop-container');
 let currentBackdropIndex = 0;
 let backdrops = [];
+let originalBackdrops = [];
+
+function setBackdrops(newBackdrops) {
+	originalBackdrops = [...newBackdrops];
+	applyBackdropOrdering();
+}
+
+function applyBackdropOrdering() {
+	const order = localStorage.getItem('backdrop-order') || 'default';
+	if (order === 'random' && originalBackdrops.length > 4) {
+		backdrops = [...originalBackdrops];
+		for (let i = backdrops.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[backdrops[i], backdrops[j]] = [backdrops[j], backdrops[i]];
+		}
+	} else {
+		backdrops = [...originalBackdrops];
+	}
+	updateOrderControlsVisibility();
+}
+
+function updateOrderControlsVisibility() {
+	const orderSection = document.getElementById('backdrop-order-section');
+	if (orderSection) {
+		if (originalBackdrops.length > 4) {
+			orderSection.style.display = 'block';
+			const savedOrder = localStorage.getItem('backdrop-order') || 'default';
+			const radios = document.querySelectorAll('input[name="bg-order"]');
+			radios.forEach(radio => {
+				radio.checked = (radio.value === savedOrder);
+			});
+		} else {
+			orderSection.style.display = 'none';
+		}
+	}
+}
 
 async function fetchLatestBackdrops() {
 	if (!BACKDROP_CONTAINER) return;
@@ -158,10 +194,11 @@ async function fetchLatestBackdrops() {
 		const favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
 		if (favs.length > 0) {
 			if (labelEl) labelEl.textContent = 'Favorite';
-			backdrops = favs.map(movie => ({
+			const favBackdrops = favs.map(movie => ({
 				url: `https://image.tmdb.org/t/p/original${movie.backdrop_path}`,
 				title: movie.title || "Unknown"
 			}));
+			setBackdrops(favBackdrops);
 			initCarousel();
 			return;
 		}
@@ -176,14 +213,15 @@ async function fetchLatestBackdrops() {
 		
 		if (data.results && data.results.length > 0) {
 			// Filtrar las películas que tengan imagen de fondo
-			backdrops = data.results
+			const theaterBackdrops = data.results
 				.filter(movie => movie.backdrop_path)
 				.map(movie => ({
 					url: `https://image.tmdb.org/t/p/original${movie.backdrop_path}`,
 					title: movie.title || movie.original_title || "Unknown"
 				}));
 			
-			if (backdrops.length > 0) {
+			if (theaterBackdrops.length > 0) {
+				setBackdrops(theaterBackdrops);
 				initCarousel();
 			}
 		}
@@ -239,11 +277,12 @@ function extractColorFromUrl(url) {
 function initCarousel() {
 	const infoEl = document.getElementById('backdrop-info');
 	const titleEl = document.getElementById('backdrop-title');
+	const titleRowEl = infoEl ? infoEl.querySelector('.backdrop-title-row') : null;
 
 	const updateTitle = async (index) => {
 		if (titleEl && backdrops[index]) {
 			titleEl.textContent = backdrops[index].title;
-			if (infoEl) infoEl.classList.add('visible');
+			if (titleRowEl) titleRowEl.classList.add('visible');
 			
 			const smallUrl = backdrops[index].url.replace('original', 'w300');
 			const color = await extractColorFromUrl(smallUrl);
@@ -273,13 +312,14 @@ function initCarousel() {
 
 	if (carouselInterval) clearInterval(carouselInterval);
 
-	// Cambiar el fondo cada 8 segundos
+	// Cambiar el fondo según la velocidad seleccionada (por defecto 6000ms)
+	const savedSpeed = parseInt(localStorage.getItem('backdrop-speed') || '6000', 10);
 	carouselInterval = setInterval(() => {
 		const backdropElements = BACKDROP_CONTAINER.querySelectorAll('.backdrop');
 		if (backdropElements.length <= 1) return;
 
 		backdropElements[currentBackdropIndex].classList.remove('active');
-		if (infoEl) infoEl.classList.remove('visible');
+		if (titleRowEl) titleRowEl.classList.remove('visible');
 
 		currentBackdropIndex = (currentBackdropIndex + 1) % backdropElements.length;
 		backdropElements[currentBackdropIndex].classList.add('active');
@@ -287,7 +327,7 @@ function initCarousel() {
 		setTimeout(() => {
 			updateTitle(currentBackdropIndex);
 		}, 600);
-	}, 8000);
+	}, savedSpeed);
 }
 
 // Iniciar el ciclo al cargar la página
@@ -299,10 +339,11 @@ async function loadMovieBackdrops(id, mediaType, defaultTitle) {
 		const data = await res.json();
 		
 		if (data.backdrops && data.backdrops.length > 0) {
-			backdrops = data.backdrops.slice(0, 10).map(img => ({
+			const movieBackdrops = data.backdrops.slice(0, 10).map(img => ({
 				url: `https://image.tmdb.org/t/p/original${img.file_path}`,
 				title: defaultTitle
 			}));
+			setBackdrops(movieBackdrops);
 			initCarousel();
             const settingsBtn = document.getElementById('settings-backdrop-btn');
             if (settingsBtn) settingsBtn.style.display = 'none';
@@ -317,14 +358,67 @@ const viewBackdropBtn = document.getElementById('view-backdrop-btn');
 
 if (viewBackdropBtn) {
 	viewBackdropBtn.addEventListener('click', () => {
-		document.body.classList.toggle('backdrop-view-mode');
+		const isActive = document.body.classList.toggle('backdrop-view-mode');
+		document.documentElement.classList.toggle('backdrop-view-active', isActive);
 	});
 }
+
+// Evitar desplazamiento en la página al estar en vista de fondo (backdrop-view-mode) o con el menú de configuración activo
+const preventDefault = (e) => {
+	if (document.body.classList.contains('backdrop-view-mode')) {
+		e.preventDefault();
+		return;
+	}
+	const settingsMenu = document.getElementById('backdrop-settings-menu');
+	if (settingsMenu && settingsMenu.classList.contains('active')) {
+		if (!settingsMenu.contains(e.target)) {
+			e.preventDefault();
+		}
+	}
+};
+
+const preventKeys = (e) => {
+	if (document.body.classList.contains('backdrop-view-mode')) {
+		const keys = ['Space', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'End', 'Home'];
+		if (keys.includes(e.code)) {
+			e.preventDefault();
+		}
+		return;
+	}
+	const settingsMenu = document.getElementById('backdrop-settings-menu');
+	if (settingsMenu && settingsMenu.classList.contains('active')) {
+		const activeEl = document.activeElement;
+		const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+		if (!isInput) {
+			const keys = ['Space', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'End', 'Home'];
+			if (keys.includes(e.code)) {
+				e.preventDefault();
+			}
+		}
+	}
+};
+
+window.addEventListener('wheel', preventDefault, { passive: false });
+window.addEventListener('touchmove', preventDefault, { passive: false });
+window.addEventListener('keydown', preventKeys, { passive: false });
 
 // Settings Menu Logic
 const settingsBtn = document.getElementById('settings-backdrop-btn');
 const settingsMenu = document.getElementById('backdrop-settings-menu');
+const settingsCloseBtn = document.getElementById('settings-close-btn');
 const bgSourceRadios = document.querySelectorAll('input[name="bg-source"]');
+const bgOrderRadios = document.querySelectorAll('input[name="bg-order"]');
+const bgSpeedRadios = document.querySelectorAll('input[name="bg-speed"]');
+
+function updateFavoritesVisibility() {
+	const bgSource = localStorage.getItem('bg-source') || 'theaters';
+	const isFav = (bgSource === 'favorites');
+	const favList = document.getElementById('settings-favorites-list');
+	const favSearch = document.getElementById('settings-favorites-search');
+	
+	if (favList) favList.style.display = isFav ? 'flex' : 'none';
+	if (favSearch) favSearch.style.display = isFav ? 'block' : 'none';
+}
 
 if (settingsBtn && settingsMenu) {
 	settingsBtn.addEventListener('click', (e) => {
@@ -332,11 +426,65 @@ if (settingsBtn && settingsMenu) {
 		settingsMenu.classList.toggle('active');
 		if (settingsMenu.classList.contains('active')) {
 			renderSettingsFavorites();
+			updateOrderControlsVisibility();
+			updateFavoritesVisibility();
 		}
 	});
 	document.addEventListener('click', (e) => {
 		if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
 			settingsMenu.classList.remove('active');
+		}
+	});
+}
+
+if (settingsCloseBtn && settingsMenu) {
+	settingsCloseBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		settingsMenu.classList.remove('active');
+	});
+}
+
+const downloadBackdropBtn = document.getElementById('download-backdrop-btn');
+if (downloadBackdropBtn) {
+	downloadBackdropBtn.addEventListener('click', async () => {
+		if (typeof backdrops === 'undefined' || backdrops.length === 0 || !backdrops[currentBackdropIndex]) {
+			alert('No backdrop image available to download.');
+			return;
+		}
+		
+		const originalText = downloadBackdropBtn.innerHTML;
+		downloadBackdropBtn.disabled = true;
+		downloadBackdropBtn.innerHTML = `
+			<svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+			<span>Downloading...</span>
+		`;
+		
+		try {
+			const backdrop = backdrops[currentBackdropIndex];
+			const url = backdrop.url;
+			const title = backdrop.title || 'backdrop';
+			const cleanTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+			const filename = `${cleanTitle}_backdrop.jpg`;
+			
+			const response = await fetch(url);
+			const blob = await response.blob();
+			const blobUrl = URL.createObjectURL(blob);
+			
+			const link = document.createElement('a');
+			link.href = blobUrl;
+			link.download = filename;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			
+			URL.revokeObjectURL(blobUrl);
+		} catch (error) {
+			console.error('Download failed', error);
+			const backdrop = backdrops[currentBackdropIndex];
+			window.open(backdrop.url, '_blank');
+		} finally {
+			downloadBackdropBtn.disabled = false;
+			downloadBackdropBtn.innerHTML = originalText;
 		}
 	});
 }
@@ -349,8 +497,36 @@ if (bgSourceRadios.length > 0) {
 		}
 		radio.addEventListener('change', (e) => {
 			localStorage.setItem('bg-source', e.target.value);
-			settingsMenu.classList.remove('active');
 			fetchLatestBackdrops();
+			updateFavoritesVisibility();
+		});
+	});
+	updateFavoritesVisibility();
+}
+
+if (bgOrderRadios.length > 0) {
+	const currentOrder = localStorage.getItem('backdrop-order') || 'default';
+	bgOrderRadios.forEach(radio => {
+		if (radio.value === currentOrder) {
+			radio.checked = true;
+		}
+		radio.addEventListener('change', (e) => {
+			localStorage.setItem('backdrop-order', e.target.value);
+			applyBackdropOrdering();
+			initCarousel();
+		});
+	});
+}
+
+if (bgSpeedRadios.length > 0) {
+	const currentSpeed = localStorage.getItem('backdrop-speed') || '6000';
+	bgSpeedRadios.forEach(radio => {
+		if (radio.value === currentSpeed) {
+			radio.checked = true;
+		}
+		radio.addEventListener('change', (e) => {
+			localStorage.setItem('backdrop-speed', e.target.value);
+			initCarousel();
 		});
 	});
 }
@@ -378,6 +554,214 @@ function toggleFavorite(movieData, btnEl) {
     }
 }
 
+function makeFavoritesReorderable(container) {
+    if (container.dataset.reorderableAttached === 'true') return;
+    container.dataset.reorderableAttached = 'true';
+    
+    let draggingElement = null;
+    let dragTimeout = null;
+    let startX = 0;
+    let startY = 0;
+    let isDragActive = false;
+    let wasDragged = false;
+    
+    // Prevent default browser image dragging ghosts (crucial for desktop mouse dragging)
+    container.addEventListener('dragstart', (e) => {
+        if (e.target.closest('.fav-drag-item')) {
+            e.preventDefault();
+        }
+    });
+    
+    // Prevent browser context menu (long press options) on mobile/desktop
+    container.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('.fav-drag-item')) {
+            e.preventDefault();
+        }
+    });
+    
+    // Click listener to load clicked movie title into search input
+    container.addEventListener('click', (e) => {
+        const item = e.target.closest('.fav-drag-item');
+        if (!item) return;
+        
+        if (wasDragged) {
+            wasDragged = false;
+            return;
+        }
+        
+        const title = item.getAttribute('title');
+        const searchInput = document.getElementById('search-query');
+        if (searchInput && title) {
+            searchInput.value = title;
+            searchInput.dispatchEvent(new Event('input'));
+            
+            const settingsMenu = document.getElementById('backdrop-settings-menu');
+            if (settingsMenu) {
+                settingsMenu.classList.remove('active');
+            }
+        }
+    });
+    
+    // 1. DESKTOP/MOUSE DRAG LOGIC (via MouseEvents)
+    const onMouseMove = (e) => {
+        if (!draggingElement) return;
+        
+        if (!isDragActive) {
+            const deltaX = Math.abs(e.clientX - startX);
+            const deltaY = Math.abs(e.clientY - startY);
+            if (deltaX > 5 || deltaY > 5) {
+                isDragActive = true;
+                wasDragged = true;
+                draggingElement.classList.add('dragging');
+            }
+            return;
+        }
+        
+        const clientX = e.clientX;
+        const siblings = [...container.querySelectorAll('.fav-drag-item:not(.dragging)')];
+        const nextSibling = siblings.find(sibling => {
+            const rect = sibling.getBoundingClientRect();
+            return clientX < rect.left + rect.width / 2;
+        });
+        
+        if (nextSibling) {
+            container.insertBefore(draggingElement, nextSibling);
+        } else {
+            container.appendChild(draggingElement);
+        }
+        
+        const containerRect = container.getBoundingClientRect();
+        if (clientX < containerRect.left + 40) {
+            container.scrollLeft -= 8;
+        } else if (clientX > containerRect.right - 40) {
+            container.scrollLeft += 8;
+        }
+    };
+    
+    const onMouseUp = () => {
+        if (draggingElement && isDragActive) {
+            draggingElement.classList.remove('dragging');
+            saveNewFavoritesOrder();
+        }
+        draggingElement = null;
+        isDragActive = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    container.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        const item = e.target.closest('.fav-drag-item');
+        if (!item) return;
+        
+        draggingElement = item;
+        startX = e.clientX;
+        startY = e.clientY;
+        isDragActive = false;
+        wasDragged = false;
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+    
+    // 2. MOBILE/TOUCH DRAG LOGIC (via TouchEvents to bypass PointerEvent bugs)
+    container.addEventListener('touchstart', (e) => {
+        const item = e.target.closest('.fav-drag-item');
+        if (!item) return;
+        
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        draggingElement = item;
+        isDragActive = false;
+        wasDragged = false;
+        
+        dragTimeout = setTimeout(() => {
+            isDragActive = true;
+            wasDragged = true;
+            item.classList.add('dragging');
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        }, 250);
+    });
+    
+    container.addEventListener('touchmove', (e) => {
+        if (!draggingElement) return;
+        
+        const touch = e.touches[0];
+        const clientX = touch.clientX;
+        const clientY = touch.clientY;
+        
+        if (!isDragActive) {
+            const deltaX = Math.abs(clientX - startX);
+            const deltaY = Math.abs(clientY - startY);
+            if (deltaX > 15 || deltaY > 15) {
+                clearTimeout(dragTimeout);
+                draggingElement = null;
+            }
+            return;
+        }
+        
+        // Prevent container scrolling/panning while dragging is active
+        e.preventDefault();
+        
+        const siblings = [...container.querySelectorAll('.fav-drag-item:not(.dragging)')];
+        const nextSibling = siblings.find(sibling => {
+            const rect = sibling.getBoundingClientRect();
+            return clientX < rect.left + rect.width / 2;
+        });
+        
+        if (nextSibling) {
+            container.insertBefore(draggingElement, nextSibling);
+        } else {
+            container.appendChild(draggingElement);
+        }
+        
+        const containerRect = container.getBoundingClientRect();
+        if (clientX < containerRect.left + 40) {
+            container.scrollLeft -= 8;
+        } else if (clientX > containerRect.right - 40) {
+            container.scrollLeft += 8;
+        }
+    }, { passive: false });
+    
+    const endTouchDrag = () => {
+        clearTimeout(dragTimeout);
+        if (draggingElement && isDragActive) {
+            draggingElement.classList.remove('dragging');
+            saveNewFavoritesOrder();
+        }
+        draggingElement = null;
+        isDragActive = false;
+    };
+    
+    container.addEventListener('touchend', endTouchDrag);
+    container.addEventListener('touchcancel', endTouchDrag);
+}
+
+function saveNewFavoritesOrder() {
+    const container = document.getElementById('settings-favorites-list');
+    if (!container) return;
+    
+    const items = [...container.querySelectorAll('.fav-drag-item')];
+    const newOrderIds = items.map(item => item.dataset.id);
+    
+    let favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
+    
+    const reorderedFavs = [];
+    newOrderIds.forEach(id => {
+        const found = favs.find(f => f.id == id);
+        if (found) reorderedFavs.push(found);
+    });
+    
+    localStorage.setItem('postCreditsFavs', JSON.stringify(reorderedFavs));
+    
+    if (localStorage.getItem('bg-source') === 'favorites') {
+        fetchLatestBackdrops();
+    }
+}
+
 function renderSettingsFavorites() {
     const favList = document.getElementById('settings-favorites-list');
     if (!favList) return;
@@ -389,9 +773,11 @@ function renderSettingsFavorites() {
     }
     
     favList.innerHTML = favs.map(f => {
-        const poster = f.poster_path ? `https://image.tmdb.org/t/p/w200${f.poster_path}` : (f.backdrop_path ? `https://image.tmdb.org/t/p/w200${f.backdrop_path}` : 'https://via.placeholder.com/40x40?text=?');
-        return `<img src="${poster}" title="${f.title}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0;">`;
+        const poster = f.poster_path ? `https://image.tmdb.org/t/p/w200${f.poster_path}` : (f.backdrop_path ? `https://image.tmdb.org/t/p/w200${f.backdrop_path}` : 'https://via.placeholder.com/150x225?text=No+Poster');
+        return `<img src="${poster}" title="${f.title}" data-id="${f.id}" class="fav-drag-item" draggable="false" style="width: 75px; height: 112px; border-radius: 8px; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0; user-select: none;">`;
     }).join('');
+    
+    makeFavoritesReorderable(favList);
 }
 
 let miniSearchTimeout;
@@ -483,37 +869,117 @@ async function renderSection(endpoint, containerId, params = '') {
             const initialItems = validItems.slice(0, 6);
             const remainingItems = validItems.slice(6);
 
+            const isHorizontal = containerId !== 'trending-people-list';
+
+            // Parallel details fetch for initialItems
+            let detailedInitialItems = [];
+            if (isHorizontal) {
+                detailedInitialItems = await Promise.all(initialItems.map(async (item) => {
+                    const type = item.media_type || (endpoint.includes('tv') ? 'tv' : 'movie');
+                    try {
+                        const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits`);
+                        const details = await res.json();
+                        return { ...item, details, type };
+                    } catch (err) {
+                        console.error("Error fetching detailed info", err);
+                        return { ...item, type };
+                    }
+                }));
+            } else {
+                detailedInitialItems = initialItems.map(item => ({ ...item, type: 'person' }));
+            }
+
             const generateCardHTML = (item) => {
                 const title = item.title || item.name;
                 const posterPath = item.poster_path || item.profile_path;
-                const poster = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '';
-                const type = item.media_type || (endpoint.includes('tv') ? 'tv' : (endpoint.includes('person') ? 'person' : 'movie'));
+                const poster = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : '';
+                const type = item.type;
                 
-                let extraInfo = '';
-                if (type === 'person') {
+                if (isHorizontal) {
+                    const overview = item.details?.overview || item.overview || 'No description available.';
+                    const backdropPath = item.details?.backdrop_path || item.backdrop_path || '';
+                    const rating = item.details?.vote_average || item.vote_average || 0;
+                    const ratingPercent = Math.round(rating * 10);
+                    const ratingText = rating > 0 ? rating.toFixed(1) : 'NR';
+                    
+                    let metaLine = '';
+                    if (type === 'movie') {
+                        const director = item.details?.credits?.crew?.find(person => person.job === 'Director');
+                        if (director) {
+                            metaLine = `Directed by: ${director.name}`;
+                        } else {
+                            const date = item.release_date || item.first_air_date;
+                            const year = date ? date.split('-')[0] : '';
+                            metaLine = year ? `Released: ${year}` : '';
+                        }
+                    } else if (type === 'tv') {
+                        const creators = item.details?.created_by;
+                        if (creators && creators.length > 0) {
+                            metaLine = `Created by: ${creators.map(c => c.name).join(', ')}`;
+                        } else {
+                            const date = item.first_air_date || item.release_date;
+                            const year = date ? date.split('-')[0] : '';
+                            metaLine = year ? `First Aired: ${year}` : '';
+                        }
+                    }
+                    
+                    let genreTags = '';
+                    if (item.details?.genres) {
+                        genreTags = item.details.genres.slice(0, 2).map(g => `
+                            <span class="genre-badge">${g.name}</span>
+                        `).join('');
+                    }
+                    
+                    const backdropUrl = backdropPath ? `https://image.tmdb.org/t/p/w780${backdropPath}` : '';
+
+                    return `
+                        <div class="media-card-horizontal" data-id="${item.id}" data-type="${type}" data-title="${title.replace(/"/g, '&quot;')}">
+                            <div class="card-backdrop" style="background-image: url(${backdropUrl});"></div>
+                            <div class="card-overlay"></div>
+                            
+                            <div class="card-poster-wrapper">
+                                <img src="${poster}" alt="${title}" class="card-poster" loading="lazy">
+                            </div>
+                            
+                            <div class="card-content">
+                                <h3 class="card-title">${title}</h3>
+                                ${metaLine ? `<p class="card-meta-line">${metaLine}</p>` : ''}
+                                <p class="card-overview">${overview}</p>
+                                <div class="card-genres">
+                                    ${genreTags}
+                                </div>
+                            </div>
+                            
+                            <div class="card-rating-wrapper">
+                                <div class="rating-circle-container">
+                                    <svg class="rating-svg" viewBox="0 0 36 36">
+                                        <path class="rating-circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        <path class="rating-circle" stroke-dasharray="${ratingPercent}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    </svg>
+                                    <div class="rating-number">${ratingText}</div>
+                                </div>
+                                <span class="rating-source">IMDb</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    let extraInfo = '';
                     const knownFor = item.known_for_department ? item.known_for_department : 'Acting';
                     extraInfo = `<p class="media-card-extra">${knownFor}</p>`;
-                } else {
-                    const date = item.release_date || item.first_air_date;
-                    const year = date ? date.split('-')[0] : '';
-                    const rating = item.vote_average ? `⭐ ${item.vote_average.toFixed(1)}` : '';
-                    if (year || rating) {
-                        extraInfo = `<p class="media-card-extra">${year} ${year && rating ? '&bull;' : ''} ${rating}</p>`;
-                    }
-                }
 
-                return `
-                    <div class="media-card" data-id="${item.id}" data-type="${type}" data-title="${title.replace(/"/g, '&quot;')}">
-                        <img src="${poster}" alt="${title}" loading="lazy">
-                        <div class="title-overlay">
-                            <span class="media-card-title">${title}</span>
-                            ${extraInfo}
+                    return `
+                        <div class="media-card" data-id="${item.id}" data-type="${type}" data-title="${title.replace(/"/g, '&quot;')}">
+                            <img src="${poster}" alt="${title}" loading="lazy">
+                            <div class="title-overlay">
+                                <span class="media-card-title">${title}</span>
+                                ${extraInfo}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             };
 
-            container.innerHTML = initialItems.map(generateCardHTML).join('');
+            container.innerHTML = detailedInitialItems.map(generateCardHTML).join('');
 
             const attachListenerToCard = (card) => {
                 card.addEventListener('click', async () => {
@@ -535,7 +1001,7 @@ async function renderSection(endpoint, containerId, params = '') {
                             const details = await detailsRes.json();
                             renderPersonDetails(details);
                         } else {
-                            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images`);
+                            const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
                             const details = await detailsRes.json();
                             renderMovieDetails(details, type);
                         }
@@ -545,47 +1011,76 @@ async function renderSection(endpoint, containerId, params = '') {
                 });
             };
 
-            container.querySelectorAll('.media-card').forEach(attachListenerToCard);
+            const cardsSelector = isHorizontal ? '.media-card-horizontal' : '.media-card';
+            container.querySelectorAll(cardsSelector).forEach(attachListenerToCard);
 
             if (remainingItems.length > 0) {
-                const showMoreIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-                const showLessIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`;
-                
                 const btnHTML = `
-                    <div class="show-more-wrapper" style="grid-column: 1 / -1; text-align: center; margin-top: 10px; margin-bottom: 10px;">
-                        <button class="go-back-btn show-more-btn" style="position: relative; top: auto; left: auto; margin: 0; box-shadow: none;" title="Show more">
-                            ${showMoreIcon}
+                    <div class="expand-btn-container">
+                        <button class="expand-section-btn show-more-btn">
+                            <span>Show More</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', btnHTML);
                 
-                const wrapper = container.querySelector('.show-more-wrapper');
+                const wrapper = container.querySelector('.expand-btn-container');
                 const btn = wrapper.querySelector('.show-more-btn');
                 
                 let isExpanded = false;
                 let extraCards = [];
                 
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     if (!isExpanded) {
+                        btn.disabled = true;
+                        btn.innerHTML = `
+                            <span>Loading...</span>
+                            <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                        `;
+
+                        let detailedRemaining = [];
+                        if (isHorizontal) {
+                            detailedRemaining = await Promise.all(remainingItems.map(async (item) => {
+                                const type = item.media_type || (endpoint.includes('tv') ? 'tv' : 'movie');
+                                try {
+                                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits`);
+                                    const details = await res.json();
+                                    return { ...item, details, type };
+                                } catch (err) {
+                                    console.error("Error fetching detailed info", err);
+                                    return { ...item, type };
+                                }
+                            }));
+                        } else {
+                            detailedRemaining = remainingItems.map(item => ({ ...item, type: 'person' }));
+                        }
+
                         const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = remainingItems.map(generateCardHTML).join('');
+                        tempDiv.innerHTML = detailedRemaining.map(generateCardHTML).join('');
                         extraCards = Array.from(tempDiv.children);
                         extraCards.forEach(card => {
                             container.insertBefore(card, wrapper);
                             attachListenerToCard(card);
                         });
-                        btn.innerHTML = showLessIcon;
-                        btn.title = "Show less";
+                        
+                        btn.disabled = false;
+                        btn.classList.add('expanded');
+                        btn.innerHTML = `
+                            <span>Show Less</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        `;
                         isExpanded = true;
                     } else {
                         extraCards.forEach(card => card.remove());
                         extraCards = [];
-                        btn.innerHTML = showMoreIcon;
-                        btn.title = "Show more";
+                        btn.classList.remove('expanded');
+                        btn.innerHTML = `
+                            <span>Show More</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        `;
                         isExpanded = false;
                         
-                        // Scroll back to the section title if needed
                         const sectionTop = container.parentElement.getBoundingClientRect().top + window.scrollY - 80;
                         window.scrollTo({ top: sectionTop, behavior: 'smooth' });
                     }
@@ -597,6 +1092,212 @@ async function renderSection(endpoint, containerId, params = '') {
     }
 }
 
+const industryNewsData = [
+    {
+        category: "Production",
+        date: "June 9, 2026",
+        title: "Spider-Man 4 Begins Production: Tom Holland Returns",
+        description: "Sony Pictures and Marvel Studios have officially kicked off filming for Spider-Man 4. Tom Holland and Zendaya are back, with Destin Daniel Cretton stepping in as director for this new trilogy opener.",
+        image: "https://images.unsplash.com/photo-1635805737707-575885ab0820?q=80&w=600&auto=format&fit=crop",
+        link: "https://www.themoviedb.org/movie/939243-spider-man-4"
+    },
+    {
+        category: "Release Date",
+        date: "June 8, 2026",
+        title: "Dune: Messiah Target Release Set for December 2026",
+        description: "Warner Bros. has added a Denis Villeneuve event film to its December 2026 release calendar. Insiders confirm this is Dune: Messiah, which will wrap up Paul Atreides' story.",
+        image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=600&auto=format&fit=crop",
+        link: "https://www.themoviedb.org/search?query=dune"
+    },
+    {
+        category: "Streaming",
+        date: "June 6, 2026",
+        title: "Wednesday Season 2 Teaser: Jenna Ortega Returns to Nevermore",
+        description: "Netflix has dropped the first teaser trailer for Wednesday Season 2. Jenna Ortega returns as Wednesday Addams, dealing with new mysteries, new teachers, and more gothic mayhem.",
+        image: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=600&auto=format&fit=crop",
+        link: "https://www.themoviedb.org/tv/119051-wednesday"
+    },
+    {
+        category: "Casting",
+        date: "June 4, 2026",
+        title: "Christopher Nolan's Next Epic Adds Robert Pattinson and Lupita Nyong'o",
+        description: "Universal Pictures is rounding out the stellar cast of Christopher Nolan's top-secret next feature film. Robert Pattinson and Lupita Nyong'o are the latest to join alongside Matt Damon.",
+        image: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=600&auto=format&fit=crop",
+        link: "https://www.themoviedb.org/person/11288-christopher-nolan"
+    }
+];
+
+async function loadIndustryNews() {
+    const container = document.getElementById('industry-news-list');
+    if (!container) return;
+    
+    let newsList = industryNewsData;
+    
+    try {
+        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fvariety.com%2Fv%2Ffilm%2Ffeed%2F`);
+        if (res.ok) {
+            const feedData = await res.json();
+            if (feedData.items && feedData.items.length > 0) {
+                newsList = feedData.items.slice(0, 10).map(item => {
+                    const category = item.categories && item.categories.length > 0 ? item.categories[0] : "Cinema";
+                    
+                    let formattedDate = item.pubDate;
+                    try {
+                        const dateObj = new Date(item.pubDate);
+                        formattedDate = dateObj.toLocaleDateString(navigator.language || 'es-MX', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                    } catch(e) {
+                        console.error(e);
+                    }
+                    
+                    let cleanDesc = item.description || "";
+                    cleanDesc = cleanDesc.replace(/<[^>]*>/g, '');
+                    cleanDesc = cleanDesc.replace(/\[\u2026\]/g, '...');
+                    
+                    return {
+                        category: category,
+                        date: formattedDate,
+                        title: item.title,
+                        description: cleanDesc,
+                        image: item.thumbnail || item.enclosure?.link || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=600&auto=format&fit=crop',
+                        link: item.link
+                    };
+                });
+            }
+        }
+    } catch(err) {
+        console.warn("Failed to fetch external news feed, falling back to local news", err);
+    }
+    
+    container.className = "news-grid-home collapsed";
+    container.innerHTML = newsList.map(news => `
+        <div class="news-card-home">
+            <div class="news-card-image" style="background-image: url('${news.image}')"></div>
+            <div class="news-card-content">
+                <div class="news-card-meta">
+                    <span class="news-card-category">${news.category}</span>
+                    <span class="news-card-date">${news.date}</span>
+                </div>
+                <h3 class="news-card-title">${news.title}</h3>
+                <p class="news-card-description">${news.description}</p>
+                <a href="${news.link}" target="_blank" class="news-card-readmore">Read full article →</a>
+            </div>
+        </div>
+    `).join('');
+
+    const nextEl = container.nextElementSibling;
+    if (nextEl && nextEl.classList.contains('expand-btn-container')) {
+        nextEl.remove();
+    }
+    
+    if (newsList.length > 4) {
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'expand-btn-container';
+        btnContainer.innerHTML = `
+            <button class="expand-section-btn">
+                <span>Show More</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+        `;
+        container.after(btnContainer);
+        
+        btnContainer.querySelector('button').addEventListener('click', (e) => {
+            const isCollapsed = container.classList.toggle('collapsed');
+            const btn = e.currentTarget;
+            btn.classList.toggle('expanded', !isCollapsed);
+            btn.querySelector('span').textContent = isCollapsed ? 'Show More' : 'Show Less';
+        });
+    }
+}
+
+async function loadPopularTrailers() {
+    const container = document.getElementById('popular-trailers-list');
+    if (!container) return;
+
+    try {
+        const lang = navigator.language || 'es-MX';
+        const response = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=${lang}&page=1`);
+        const data = await response.json();
+        
+        if (data.results) {
+            const movies = data.results.filter(m => m.backdrop_path).slice(0, 15);
+            
+            const trailers = await Promise.all(movies.map(async (movie) => {
+                try {
+                    const videoRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
+                    const videoData = await videoRes.json();
+                    const trailer = videoData.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+                    if (trailer) {
+                        return {
+                            movieTitle: movie.title,
+                            trailerName: trailer.name,
+                            key: trailer.key,
+                            backdrop: `https://image.tmdb.org/t/p/w780${movie.backdrop_path}`
+                        };
+                    }
+                } catch (err) {
+                    console.error("Error fetching video for movie " + movie.id, err);
+                }
+                return null;
+            }));
+            
+            const validTrailers = trailers.filter(t => t !== null).slice(0, 12);
+            
+            if (validTrailers.length > 0) {
+                container.className = "media-grid-trailers collapsed";
+                container.innerHTML = validTrailers.map(t => {
+                    const videoEmbed = `<iframe src="https://www.youtube.com/embed/${t.key}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>`;
+                    const escapedEmbed = videoEmbed.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
+                    return `
+                        <div class="trailer-card" onclick="openLightbox('${escapedEmbed}')">
+                            <img src="${t.backdrop}" alt="${t.movieTitle}" loading="lazy">
+                            <div class="trailer-card-overlay">
+                                <h3 class="trailer-card-title">${t.movieTitle}</h3>
+                                <p class="trailer-card-subtitle">${t.trailerName}</p>
+                            </div>
+                            <div class="trailer-card-play-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const nextEl = container.nextElementSibling;
+                if (nextEl && nextEl.classList.contains('expand-btn-container')) {
+                    nextEl.remove();
+                }
+                
+                if (validTrailers.length > 4) {
+                    const btnContainer = document.createElement('div');
+                    btnContainer.className = 'expand-btn-container';
+                    btnContainer.innerHTML = `
+                        <button class="expand-section-btn">
+                            <span>Show More</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    `;
+                    container.after(btnContainer);
+                    
+                    btnContainer.querySelector('button').addEventListener('click', (e) => {
+                        const isCollapsed = container.classList.toggle('collapsed');
+                        const btn = e.currentTarget;
+                        btn.classList.toggle('expanded', !isCollapsed);
+                        btn.querySelector('span').textContent = isCollapsed ? 'Show More' : 'Show Less';
+                    });
+                }
+            } else {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4);">No trailers found.</p>';
+            }
+        }
+    } catch (error) {
+        console.error("Error loading popular trailers", error);
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4);">Error loading trailers.</p>';
+    }
+}
+
 async function loadDefaultContent() {
     const region = (navigator.language || 'es-MX').split('-')[1] || 'US';
     // Cargar en cines (Now Playing)
@@ -605,8 +1306,10 @@ async function loadDefaultContent() {
     await renderSection('trending/movie/week', 'trending-movies-list');
     // Cargar series en tendencia
     await renderSection('trending/tv/week', 'trending-tv-list');
-    // Cargar personas en tendencia
-    await renderSection('trending/person/week', 'trending-people-list');
+    // Cargar trailers populares
+    await loadPopularTrailers();
+    // Cargar noticias de la industria
+    loadIndustryNews();
 }
 
 // Iniciar la carga del contenido principal
@@ -648,6 +1351,7 @@ window.pushNavState = function() {
         searchValue: savedState.searchValue,
         isHome: isHome,
         backdrops: typeof backdrops !== 'undefined' ? [...backdrops] : [],
+        originalBackdrops: typeof originalBackdrops !== 'undefined' ? [...originalBackdrops] : [],
         settingsBtnDisplay: settingsBtn ? settingsBtn.style.display : '',
         labelContent: labelEl ? labelEl.textContent : ''
     });
@@ -679,6 +1383,8 @@ window.goBack = function() {
             }
             if (prevState.backdrops && prevState.backdrops.length > 0) {
                 backdrops = prevState.backdrops;
+                originalBackdrops = prevState.originalBackdrops || [...prevState.backdrops];
+                updateOrderControlsVisibility();
                 initCarousel();
                 const settingsBtn = document.getElementById('settings-backdrop-btn');
                 if (settingsBtn) settingsBtn.style.display = prevState.settingsBtnDisplay;
@@ -708,7 +1414,8 @@ window.restoreHome = function() {
         <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-grid" id="now-playing-list"></div></section>
         <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-grid" id="trending-movies-list"></div></section>
         <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-grid" id="trending-tv-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Trending People</h2><div class="media-grid" id="trending-people-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Popular Trailers</h2><div class="media-grid-trailers" id="popular-trailers-list"></div></section>
+        <section class="media-section"><h2 class="section-title">Latest Industry News</h2><div class="news-grid-home" id="industry-news-list"></div></section>
         <section class="links-section">
             <h2 class="section-title">Explore More</h2>
             <div class="links-grid">
@@ -825,7 +1532,7 @@ if (searchInput) {
                                         const details = await detailsRes.json();
                                         renderPersonDetails(details);
                                     } else {
-                                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images`);
+                                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
                                         const details = await detailsRes.json();
                                         renderMovieDetails(details, type);
                                     }
@@ -856,21 +1563,55 @@ function renderMovieDetails(details, mediaType) {
     const poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
     
     // Meta data
-    const genres = details.genres ? details.genres.map(g => `<span class="cinematic-genre">${g.name}</span>`).join('') : '';
+    const genresListText = details.genres && details.genres.length > 0 ? details.genres.map(g => g.name).join(' / ').toUpperCase() : 'FEATURED';
     const runtimeStr = details.runtime ? `${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m` : (details.episode_run_time && details.episode_run_time[0] ? `${details.episode_run_time[0]}m` : '');
     const language = details.spoken_languages && details.spoken_languages.length > 0 ? details.spoken_languages[0].english_name : (details.original_language ? details.original_language.toUpperCase() : '');
-    
-    const metaLineItems = [year, runtimeStr, language ? `Language : ${language}` : ''].filter(Boolean);
-    const metaLine = metaLineItems.join(' | ');
 
-    let director = '';
-    if (details.credits && details.credits.crew) {
+    let directorText = '';
+    if (mediaType === 'tv' && details.created_by && details.created_by.length > 0) {
+        const creatorsHTML = details.created_by.map(c => `<span class="clickable-person" data-id="${c.id}">${c.name}</span>`).join(', ');
+        directorText = `Created by ${creatorsHTML}`;
+    } else if (details.credits && details.credits.crew) {
         const dirObj = details.credits.crew.find(c => c.job === 'Director' || c.job === 'Executive Producer' || c.job === 'Series Director');
-        if (dirObj) director = `Directed by : <span class="clickable-person" data-id="${dirObj.id}">${dirObj.name}</span>`;
+        if (dirObj) {
+            directorText = `Director by <span class="clickable-person" data-id="${dirObj.id}">${dirObj.name}</span>`;
+        }
     }
 
     const ratingRaw = details.vote_average || 0;
     const ratingStr = ratingRaw > 0 ? ratingRaw.toFixed(1) : 'NR';
+
+    // Watch Providers
+    let watchProvidersHTML = '';
+    if (details['watch/providers'] && details['watch/providers'].results) {
+        const provs = details['watch/providers'].results;
+        const userCountry = (navigator.language || 'es-MX').split('-')[1] || 'US';
+        const data = provs[userCountry] || provs['US'] || Object.values(provs).find(p => p.flatrate || p.buy || p.rent);
+        
+        if (data) {
+            const list = data.flatrate || data.buy || data.rent || [];
+            if (list.length > 0) {
+                const seen = new Set();
+                const uniqueList = [];
+                for (const p of list) {
+                    if (!seen.has(p.provider_id)) {
+                        seen.add(p.provider_id);
+                        uniqueList.push(p);
+                    }
+                }
+                watchProvidersHTML = `
+                    <div class="hero-watch-providers">
+                        <span>AVAILABLE ON:</span>
+                        <div class="provider-logos-row">
+                            ${uniqueList.slice(0, 6).map(p => `
+                                <img src="https://image.tmdb.org/t/p/w92${p.logo_path}" alt="${p.provider_name}" class="provider-logo" title="${p.provider_name}">
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    }
 
     // Enlaces externos
     const imdbLink = details.external_ids && details.external_ids.imdb_id ? `<a href="https://www.imdb.com/title/${details.external_ids.imdb_id}" target="_blank" class="link-btn imdb" title="IMDb"><img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb"></a>` : '';
@@ -882,7 +1623,7 @@ function renderMovieDetails(details, mediaType) {
     const favClass = isFavorite(details.id) ? 'active' : '';
     const favButton = `<button class="fav-btn ${favClass}" id="fav-btn" data-id="${details.id}" title="Toggle Favorite"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>`;
 
-    // Rating Circle (replacing laurels)
+    // Rating Circle
     const ratingHTML = `
         <div class="cinematic-rating-circle" style="transform: scale(0.8); transform-origin: left center; margin: 0;">
             <svg viewBox="0 0 36 36" class="circular-chart yellow">
@@ -903,66 +1644,80 @@ function renderMovieDetails(details, mediaType) {
         </div>
     `;
 
-    // Tagline / Quote
-    const quoteText = details.tagline || 'A THRILLING ADVENTURE THAT WILL KEEP YOU ON EDGE.';
-
-    // Synopsis Heading
-    let overviewParts = (details.overview || 'A journey begins.').split('. ');
-    let synopsisHeading = overviewParts[0] ? overviewParts[0].toUpperCase() + '.' : 'THE TELLING OF TWO INTERTWINING LIVES.';
-    let overviewRest = overviewParts.slice(1).join('. ');
-    if(!overviewRest) overviewRest = details.overview || 'Sin descripción disponible.';
-
-    // Media (Trailers & Captures)
-    let trailerKey = '';
+    // Media (Trailers & Captures in 3x3 Grid)
+    let mediaItems = [];
     if (details.videos && details.videos.results) {
-        const trailer = details.videos.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
-        if (trailer) trailerKey = trailer.key;
+        const ytVideos = details.videos.results.filter(v => v.site === 'YouTube').slice(0, 3);
+        ytVideos.forEach(v => {
+            mediaItems.push({
+                type: 'video',
+                key: v.key,
+                title: v.name,
+                thumbnail: `https://img.youtube.com/vi/${v.key}/mqdefault.jpg`
+            });
+        });
     }
-    let backdrops = [];
     if (details.images && details.images.backdrops) {
-        backdrops = details.images.backdrops.slice(0, 4);
-    }
-    
-    let leftImg = backdrops[0] ? `https://image.tmdb.org/t/p/w780${backdrops[0].file_path}` : poster;
-    let rightImg = backdrops[1] ? `https://image.tmdb.org/t/p/w780${backdrops[1].file_path}` : poster;
-    let centerMedia = '';
-    if (trailerKey) {
-        centerMedia = `
-            <div class="logan-media-center">
-                <iframe src="https://www.youtube.com/embed/${trailerKey}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>
-            </div>
-        `;
-    } else if (backdrops[2]) {
-        centerMedia = `
-            <div class="logan-media-center" onclick="openLightbox('<img src=\\'https://image.tmdb.org/t/p/w1280${backdrops[2].file_path}\\'>')" style="cursor: pointer;">
-                <img src="https://image.tmdb.org/t/p/w1280${backdrops[2].file_path}" alt="Capture">
-                <div class="media-overlay-text">
-                    <h3>SCENE CAPTURE</h3>
-                    <p>${title}</p>
-                </div>
-            </div>
-        `;
-    } else {
-        centerMedia = `
-            <div class="logan-media-center" onclick="openLightbox('<img src=\\'${poster}\\'>')" style="cursor: pointer;">
-                <img src="${poster}" alt="Poster" style="object-fit: contain;">
-            </div>
-        `;
+        const needed = 9 - mediaItems.length;
+        const bToUse = details.images.backdrops.slice(0, needed);
+        bToUse.forEach((b, idx) => {
+            mediaItems.push({
+                type: 'image',
+                url: `https://image.tmdb.org/t/p/w780${b.file_path}`,
+                fullUrl: `https://image.tmdb.org/t/p/w1280${b.file_path}`,
+                title: `Capture ${idx + 1}`
+            });
+        });
     }
 
-    // News/Cast
-    let newsHTML = '';
-    if (details.credits && details.credits.cast) {
-        const topCast = details.credits.cast.slice(0, 2);
-        newsHTML = topCast.map(actor => {
-            const img = actor.profile_path ? `https://image.tmdb.org/t/p/h632${actor.profile_path}` : poster;
+    if (mediaItems.length === 0) {
+        mediaItems.push({
+            type: 'image',
+            url: details.backdrop_path ? `https://image.tmdb.org/t/p/w780${details.backdrop_path}` : poster,
+            fullUrl: details.backdrop_path ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}` : poster,
+            title: title
+        });
+    }
+
+    const mediaGridHTML = mediaItems.map(item => {
+        if (item.type === 'video') {
+            const videoEmbed = `<iframe src="https://www.youtube.com/embed/${item.key}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>`;
+            const escapedEmbed = videoEmbed.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
             return `
-                <div class="logan-news-card clickable-person" data-id="${actor.id}">
-                    <img src="${img}" alt="${actor.name}">
-                    <div class="logan-news-card-content">
-                        <span class="tag">CAST</span> <span class="date">FEATURED</span>
-                        <h2>${actor.name.toUpperCase()} AS ${actor.character ? actor.character.toUpperCase() : 'STAR'}</h2>
+                <div class="media-capture-card" onclick="openLightbox('${escapedEmbed}')">
+                    <span class="video-badge">VIDEO</span>
+                    <img src="${item.thumbnail}" alt="${item.title.replace(/"/g, '&quot;')}" loading="lazy">
+                    <div class="play-overlay">
+                        <svg class="play-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                     </div>
+                </div>
+            `;
+        } else {
+            const imgHTML = `<img src="${item.fullUrl}" alt="${item.title}">`;
+            const escapedImg = imgHTML.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
+            return `
+                <div class="media-capture-card" onclick="openLightbox('${escapedImg}')">
+                    <img src="${item.url}" alt="${item.title}" loading="lazy">
+                </div>
+            `;
+        }
+    }).join('');
+
+    // Full Cast
+    let castHTML = '';
+    if (details.credits && details.credits.cast && details.credits.cast.length > 0) {
+        castHTML = details.credits.cast.map(actor => {
+            const initials = actor.name ? actor.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+            const img = actor.profile_path 
+                ? `https://image.tmdb.org/t/p/w185${actor.profile_path}` 
+                : `https://via.placeholder.com/150/111424/ffffff?text=${encodeURIComponent(initials)}`;
+            return `
+                <div class="cast-member-card clickable-person" data-id="${actor.id}">
+                    <div class="cast-member-avatar-wrapper">
+                        <img src="${img}" alt="${actor.name}" loading="lazy">
+                    </div>
+                    <span class="cast-member-name">${actor.name}</span>
+                    <span class="cast-member-character">${actor.character || 'Star'}</span>
                 </div>
             `;
         }).join('');
@@ -977,57 +1732,62 @@ function renderMovieDetails(details, mediaType) {
 
     const html = `
         <div class="movie-details-container cinematic-view">
-            <button class="go-back-btn" onclick="${btnAction}" title="${btnTitle}">
-                ${btnIcon}
-            </button>
-            <div class="cinematic-hero-overlay"></div>
-            
-            <div class="cinematic-hero-content">
-                <img class="cinematic-hero-poster-bg" src="${poster}" alt="">
-                <h1 class="cinematic-title-logan">${title.toUpperCase()}</h1>
-                
-                <div class="cinematic-quote-section">
-                    <p class="cinematic-quote">"${quoteText}"</p>
-                    <div class="cinematic-laurels">
-                        ${ratingHTML}
+            <div class="cinematic-details-hero" style="background-image: url('https://image.tmdb.org/t/p/w1280${details.backdrop_path || details.poster_path}');">
+                <button class="go-back-btn" onclick="${btnAction}" title="${btnTitle}">
+                    ${btnIcon}
+                </button>
+                <div class="cinematic-hero-overlay"></div>
+                <div class="ambient-glow-bg"></div>
+                <div class="cinematic-hero-content-new">
+                    <span class="hero-collection-tag">${genresListText}</span>
+                    
+                    <div class="hero-title-rating-row">
+                        <h1 class="cinematic-title-logan-new">${title.toUpperCase()}</h1>
+                        <div class="hero-rating-wrapper">
+                            ${ratingHTML}
+                        </div>
+                    </div>
+
+                    <div class="hero-metadata-row">
+                        ${directorText ? `<span class="hero-director">${directorText}</span>` : ''}
+                        ${directorText ? `<span class="hero-meta-divider">•</span>` : ''}
+                        <span class="hero-meta-year">${year}</span>
+                        <span class="hero-meta-divider">•</span>
+                        <span class="hero-meta-runtime">${runtimeStr}</span>
+                    </div>
+
+                    <p class="hero-synopsis-new">${details.overview || 'Sin descripción disponible.'}</p>
+                    
+                    ${watchProvidersHTML}
+
+                    <div class="movie-links-row-new">
+                        ${favButton}
+                        ${letterboxdLink}
+                        ${imdbLink}
+                        ${tmdbLink}
                     </div>
                 </div>
             </div>
 
-            <div class="logan-synopsis-section">
-                <div class="logan-synopsis-left">
-                    <h4>SYNOPSIS</h4>
-                    <h2>${synopsisHeading}</h2>
-                </div>
-                <div class="logan-synopsis-right">
-                    <p>${overviewRest}</p>
-                </div>
-            </div>
-
             <div class="logan-media-section">
-                <img class="logan-media-side" src="${leftImg}" alt="Scene" onclick="openLightbox('<img src=\\'${leftImg}\\'>')" style="cursor: pointer;">
-                ${centerMedia}
-                <img class="logan-media-side" src="${rightImg}" alt="Scene" onclick="openLightbox('<img src=\\'${rightImg}\\'>')" style="cursor: pointer;">
+                <h4>Captures & Videos</h4>
+                <div class="media-grid-captures">
+                    ${mediaGridHTML}
+                </div>
             </div>
 
-            ${newsHTML ? `
+            ${castHTML ? `
             <div class="logan-news-section">
-                <h4>CAST & CREW</h4>
-                <div class="logan-news-grid">
-                    ${newsHTML}
+                <h4>FULL CAST</h4>
+                <div class="cast-grid-full">
+                    ${castHTML}
                 </div>
             </div>
             ` : ''}
 
             <div class="logan-footer-info">
                 <div class="director-info">
-                    ${director ? `<span>${director}</span>` : `<span>${title}</span>`}
-                </div>
-                <div class="movie-links-row">
-                    ${favButton}
-                    ${letterboxdLink}
-                    ${imdbLink}
-                    ${tmdbLink}
+                    <span>${title}</span>
                 </div>
             </div>
         </div>
@@ -1040,15 +1800,15 @@ function renderMovieDetails(details, mediaType) {
         const smallPoster = `https://image.tmdb.org/t/p/w300${details.poster_path}`;
         extractColorFromUrl(smallPoster).then(color => {
             const rgbColor = `rgb(${Math.min(255, color.r + 40)}, ${Math.min(255, color.g + 40)}, ${Math.min(255, color.b + 40)})`;
-            const titleEl = main.querySelector('.cinematic-title-logan');
-            const quoteEl = main.querySelector('.cinematic-quote');
+            const titleEl = main.querySelector('.cinematic-title-logan-new');
             if (titleEl) {
                 titleEl.style.color = rgbColor;
                 titleEl.style.transition = 'color 0.5s ease';
             }
-            if (quoteEl) {
-                quoteEl.style.color = rgbColor;
-                quoteEl.style.transition = 'color 0.5s ease';
+            
+            const glowEl = main.querySelector('.ambient-glow-bg');
+            if (glowEl) {
+                glowEl.style.setProperty('--ambient-gradient', `radial-gradient(circle, rgba(${color.r}, ${color.g}, ${color.b}, 0.35) 0%, rgba(${color.r}, ${color.g}, ${color.b}, 0) 70%)`);
             }
         });
     }
@@ -1075,12 +1835,10 @@ function renderMovieDetails(details, mediaType) {
         el.addEventListener('click', async () => {
             const personId = el.dataset.id;
             const lang = navigator.language || 'es-MX';
-            saveCurrentState();
-            window.scrollTo({ top: 30, behavior: 'smooth' });
             try {
                 const detailsRes = await fetch(`https://api.themoviedb.org/3/person/${personId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=combined_credits,external_ids`);
                 const personDetails = await detailsRes.json();
-                renderPersonDetails(personDetails);
+                openActorDrawer(personDetails);
             } catch(err) {
                 console.error(err);
             }
@@ -1094,15 +1852,11 @@ function renderMovieDetails(details, mediaType) {
     main.querySelectorAll('.cast-card').forEach(card => {
         card.addEventListener('click', async () => {
             const id = card.dataset.id;
-            const cardTitle = card.dataset.title;
-            if (searchInput) searchInput.value = cardTitle;
-            saveCurrentState();
-            window.scrollTo({ top: 30, behavior: 'smooth' });
             try {
                 const lang = navigator.language || 'es-MX';
                 const detailsRes = await fetch(`https://api.themoviedb.org/3/person/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=combined_credits,external_ids`);
                 const personDetails = await detailsRes.json();
-                renderPersonDetails(personDetails);
+                openActorDrawer(personDetails);
             } catch(err) {
                 console.error(err);
             }
@@ -1170,35 +1924,41 @@ function renderPersonDetails(details) {
         overviewRest = overviewRest.replace(/\n/g, '<br><br>');
     }
 
-    // Media (from combined_credits)
-    let topCreditsMedia = [];
+    // Media (from combined_credits, up to 9 captures)
+    let mediaItems = [];
     if (details.combined_credits && details.combined_credits.cast) {
-        topCreditsMedia = details.combined_credits.cast
+        const sortedCast = details.combined_credits.cast
             .filter(c => c.backdrop_path)
             .sort((a,b) => b.popularity - a.popularity)
-            .slice(0, 3);
+            .slice(0, 9);
+        sortedCast.forEach((credit, idx) => {
+            mediaItems.push({
+                type: 'image',
+                url: `https://image.tmdb.org/t/p/w780${credit.backdrop_path}`,
+                fullUrl: `https://image.tmdb.org/t/p/w1280${credit.backdrop_path}`,
+                title: credit.title || credit.name || `Capture ${idx + 1}`
+            });
+        });
     }
-    
-    let leftImg = topCreditsMedia[0] ? `https://image.tmdb.org/t/p/w780${topCreditsMedia[0].backdrop_path}` : profile;
-    let rightImg = topCreditsMedia[1] ? `https://image.tmdb.org/t/p/w780${topCreditsMedia[1].backdrop_path}` : profile;
-    let centerMedia = '';
-    if (topCreditsMedia[2]) {
-        centerMedia = `
-            <div class="logan-media-center" onclick="openLightbox('<img src=\\'https://image.tmdb.org/t/p/w1280${topCreditsMedia[2].backdrop_path}\\'>')" style="cursor: pointer;">
-                <img src="https://image.tmdb.org/t/p/w1280${topCreditsMedia[2].backdrop_path}" alt="Capture">
-                <div class="media-overlay-text">
-                    <h3>SCENE CAPTURE</h3>
-                    <p>${topCreditsMedia[2].title || topCreditsMedia[2].name}</p>
-                </div>
+
+    if (mediaItems.length === 0) {
+        mediaItems.push({
+            type: 'image',
+            url: profile,
+            fullUrl: profile,
+            title: name
+        });
+    }
+
+    const mediaGridHTML = mediaItems.map(item => {
+        const imgHTML = `<img src="${item.fullUrl}" alt="${item.title.replace(/"/g, '&quot;')}">`;
+        const escapedImg = imgHTML.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
+        return `
+            <div class="media-capture-card" onclick="openLightbox('${escapedImg}')">
+                <img src="${item.url}" alt="${item.title.replace(/"/g, '&quot;')}" loading="lazy">
             </div>
         `;
-    } else {
-        centerMedia = `
-            <div class="logan-media-center" onclick="openLightbox('<img src=\\'${profile}\\'>')" style="cursor: pointer;">
-                <img src="${profile}" alt="Profile" style="object-fit: contain;">
-            </div>
-        `;
-    }
+    }).join('');
 
     // News/Cast (Known For large cards)
     let newsHTML = '';
@@ -1258,9 +2018,10 @@ function renderPersonDetails(details) {
             </div>
 
             <div class="logan-media-section">
-                <img class="logan-media-side" src="${leftImg}" alt="Scene" onclick="openLightbox('<img src=\\'${leftImg}\\'>')" style="cursor: pointer;">
-                ${centerMedia}
-                <img class="logan-media-side" src="${rightImg}" alt="Scene" onclick="openLightbox('<img src=\\'${rightImg}\\'>')" style="cursor: pointer;">
+                <h4>Captures</h4>
+                <div class="media-grid-captures">
+                    ${mediaGridHTML}
+                </div>
             </div>
 
             ${newsHTML ? `
@@ -1337,7 +2098,7 @@ function renderPersonDetails(details) {
             window.scrollTo({ top: 30, behavior: 'smooth' });
             try {
                 const lang = navigator.language || 'es-MX';
-                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images`);
+                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
                 const creditDetails = await detailsRes.json();
                 renderMovieDetails(creditDetails, type);
             } catch(err) {
@@ -1362,4 +2123,232 @@ if (backToTopBtn) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
+
+// --- Cine-Roulette Feature ---
+function initCineRoulette() {
+    const rouletteBtn = document.getElementById('roulette-backdrop-btn');
+    const modal = document.getElementById('roulette-modal');
+    const closeBtn = document.getElementById('roulette-close-btn');
+    const spinBtn = document.getElementById('roulette-spin-btn');
+    const genreSelect = document.getElementById('roulette-genre-select');
+    const track = document.getElementById('roulette-track');
+    const winnerCard = document.getElementById('roulette-winner-card');
+
+    if (!rouletteBtn || !modal || !closeBtn || !spinBtn || !genreSelect || !track || !winnerCard) return;
+
+    rouletteBtn.addEventListener('click', () => {
+        modal.classList.add('active');
+        document.body.classList.add('roulette-active');
+        document.documentElement.classList.add('roulette-active');
+        winnerCard.classList.remove('active');
+        track.innerHTML = '';
+        track.style.transition = 'none';
+        track.style.transform = 'translateX(0)';
+        spinBtn.disabled = false;
+    });
+
+    const closeRouletteModal = () => {
+        modal.classList.remove('active');
+        document.body.classList.remove('roulette-active');
+        document.documentElement.classList.remove('roulette-active');
+    };
+
+    closeBtn.addEventListener('click', closeRouletteModal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeRouletteModal();
+        }
+    });
+
+    spinBtn.addEventListener('click', async () => {
+        spinBtn.disabled = true;
+        winnerCard.classList.remove('active');
+        track.innerHTML = '';
+        track.style.transition = 'none';
+        track.style.transform = 'translateX(0)';
+
+        const genre = genreSelect.value;
+        const randomPage = Math.floor(Math.random() * 5) + 1;
+        const lang = navigator.language || 'es-MX';
+        
+        try {
+            const url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genre}&page=${randomPage}&vote_average.gte=6.5&sort_by=popularity.desc&language=${lang}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (!data.results || data.results.length < 10) {
+                alert("No se encontraron suficientes películas para esta selección. Intenta con otro género.");
+                spinBtn.disabled = false;
+                return;
+            }
+
+            let movies = [...data.results];
+            while (movies.length < 30) {
+                movies = movies.concat(data.results);
+            }
+            movies = movies.slice(0, 30);
+
+            const winningIndex = 23;
+            const winner = movies[winningIndex];
+
+            track.innerHTML = movies.map((m, idx) => {
+                const poster = m.poster_path ? `https://image.tmdb.org/t/p/w185${m.poster_path}` : 'https://via.placeholder.com/120x180?text=No+Poster';
+                return `
+                    <div class="roulette-item" id="roulette-item-${idx}">
+                        <img src="${poster}" alt="${m.title}">
+                    </div>
+                `;
+            }).join('');
+
+            const cardWidth = 136;
+            const spinTranslation = winningIndex * cardWidth;
+
+            setTimeout(() => {
+                track.style.transition = 'transform 4s cubic-bezier(0.15, 0.85, 0.35, 1)';
+                track.style.transform = `translateX(-${spinTranslation}px)`;
+            }, 50);
+
+            setTimeout(() => {
+                const winElement = document.getElementById(`roulette-item-${winningIndex}`);
+                if (winElement) winElement.classList.add('active');
+
+                const winnerPoster = winner.poster_path ? `https://image.tmdb.org/t/p/w185${winner.poster_path}` : 'https://via.placeholder.com/90x135?text=No+Poster';
+                winnerCard.innerHTML = `
+                    <div class="roulette-winner-poster">
+                        <img src="${winnerPoster}" alt="${winner.title}">
+                    </div>
+                    <div class="roulette-winner-info">
+                        <h3 class="roulette-winner-title">${winner.title}</h3>
+                        <span class="roulette-winner-rating">⭐ ${winner.vote_average.toFixed(1)} TMDB</span>
+                        <p class="roulette-winner-synopsis">${winner.overview || 'Sin descripción disponible.'}</p>
+                        <button class="roulette-winner-btn" id="roulette-view-winner-btn" data-id="${winner.id}">VIEW DETAILS</button>
+                    </div>
+                `;
+                winnerCard.classList.add('active');
+                spinBtn.disabled = false;
+
+                document.getElementById('roulette-view-winner-btn').addEventListener('click', async () => {
+                    const id = winner.id;
+                    if (searchInput) {
+                        searchInput.value = winner.title;
+                    }
+                    closeRouletteModal();
+                    saveCurrentState();
+                    window.scrollTo({ top: 30, behavior: 'smooth' });
+                    try {
+                        const detailsRes = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
+                        const details = await detailsRes.json();
+                        renderMovieDetails(details, 'movie');
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+
+            }, 4100);
+
+        } catch (err) {
+            console.error(err);
+            alert("Error al girar la ruleta. Por favor reintenta.");
+            spinBtn.disabled = false;
+        }
+    });
+}
+
+initCineRoulette();
+
+// --- Actor Drawer ---
+function openActorDrawer(details) {
+    const drawer = document.getElementById('actor-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    const body = document.getElementById('actor-drawer-body');
+
+    if (!drawer || !backdrop || !body) return;
+
+    const avatar = details.profile_path 
+        ? `https://image.tmdb.org/t/p/w300${details.profile_path}` 
+        : 'https://via.placeholder.com/150/111424/ffffff?text=N/A';
+    
+    const birthDate = details.birthday ? details.birthday : 'Unknown';
+    const birthPlace = details.place_of_birth ? details.place_of_birth : 'Unknown';
+    
+    let creditsHTML = '';
+    if (details.combined_credits && details.combined_credits.cast) {
+        const sortedCredits = details.combined_credits.cast
+            .filter(c => c.poster_path)
+            .sort((a, b) => b.popularity - a.popularity)
+            .slice(0, 10);
+            
+        if (sortedCredits.length > 0) {
+            creditsHTML = `
+                <h4 class="actor-credits-title">KNOWN FOR</h4>
+                <div class="actor-credits-slider">
+                    ${sortedCredits.map(c => `
+                        <div class="actor-credit-card" data-id="${c.id}" data-type="${c.media_type}">
+                            <img src="https://image.tmdb.org/t/p/w185${c.poster_path}" alt="${c.title || c.name}" class="actor-credit-poster" loading="lazy">
+                            <span class="actor-credit-title">${c.title || c.name}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    }
+
+    body.innerHTML = `
+        <div class="actor-profile-header">
+            <img src="${avatar}" alt="${details.name}" class="actor-profile-avatar">
+            <h3 class="actor-profile-name">${details.name}</h3>
+            <span class="actor-profile-department">${details.known_for_department || 'Acting'}</span>
+        </div>
+        <div class="actor-profile-meta">
+            <span class="actor-profile-meta-item"><strong>Born:</strong> ${birthDate}</span>
+            <span class="actor-profile-meta-item"><strong>Place of birth:</strong> ${birthPlace}</span>
+        </div>
+        <p class="actor-profile-bio">${details.biography || 'No biography available for this artist.'}</p>
+        ${creditsHTML}
+    `;
+
+    drawer.classList.add('active');
+    backdrop.classList.add('active');
+
+    body.querySelectorAll('.actor-credit-card').forEach(card => {
+        card.addEventListener('click', async () => {
+            const id = card.dataset.id;
+            const type = card.dataset.type || 'movie';
+            const lang = navigator.language || 'es-MX';
+            
+            drawer.classList.remove('active');
+            backdrop.classList.remove('active');
+            
+            saveCurrentState();
+            window.scrollTo({ top: 30, behavior: 'smooth' });
+            
+            try {
+                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
+                const mediaDetails = await detailsRes.json();
+                renderMovieDetails(mediaDetails, type);
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    });
+}
+
+function initActorDrawerEvents() {
+    const drawer = document.getElementById('actor-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+    const closeBtn = document.getElementById('actor-drawer-close');
+
+    if (!drawer || !backdrop || !closeBtn) return;
+
+    const closeDrawer = () => {
+        drawer.classList.remove('active');
+        backdrop.classList.remove('active');
+    };
+
+    closeBtn.addEventListener('click', closeDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+}
+
+initActorDrawerEvents();
 
