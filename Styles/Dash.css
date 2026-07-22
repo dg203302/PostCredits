@@ -1399,10 +1399,10 @@ body.backdrop-view-mode .settings-menu {
 }
 
 .settings-menu {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	margin-top: 8px;
+	position: fixed;
+	top: calc(32px + 44px + 8px); /* backdrop-info top + buttons height + gap */
+	right: 32px;
+	margin-top: 0;
 	background: var(--search-bg, rgba(10, 16, 32, 0.75));
 	border: 1px solid rgba(255, 255, 255, 0.15);
 	border-radius: 16px;
@@ -1412,10 +1412,10 @@ body.backdrop-view-mode .settings-menu {
 	gap: 12px;
 	backdrop-filter: blur(24px);
 	-webkit-backdrop-filter: blur(24px);
-	z-index: 250;
+	z-index: 2500;
 	text-align: left;
-	width: min(100vw - 32px, 420px);
-	max-height: calc(100vh - 80px);
+	width: min(100vw - 32px, 340px);
+	max-height: calc(100vh - 32px - 44px - 8px - 16px); /* stays inside viewport */
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);

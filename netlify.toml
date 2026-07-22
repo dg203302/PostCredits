@@ -1,0 +1,3 @@
+[[edge_functions]]
+  function = "Enviar_msg"
+  path = "/Chatbot"
