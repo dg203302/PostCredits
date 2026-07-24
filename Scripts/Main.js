@@ -122,11 +122,31 @@ document.addEventListener('click', (e) => {
 });
 
 // --- Lightbox Media ---
-window.openLightbox = function(mediaHTML) {
+window.openLightbox = function(mediaHTML, title = '', overview = '', year = '', rating = '') {
     const lightbox = document.getElementById('media-lightbox');
     const body = document.getElementById('lightbox-body');
-    if (!lightbox || !body) return;
+    const detailsContainer = document.getElementById('lightbox-details');
+    if (!lightbox || !body || !detailsContainer) return;
+    
     body.innerHTML = mediaHTML;
+    
+    if (title) {
+        detailsContainer.style.display = 'flex';
+        let ratingHTML = rating ? `<span class="lightbox-details-rating">⭐ ${rating}</span>` : '';
+        detailsContainer.innerHTML = `
+            <h4 class="lightbox-details-title">${title}</h4>
+            <div class="lightbox-details-meta">
+                ${year ? `<span>${year}</span>` : ''}
+                ${year && rating ? `<span>•</span>` : ''}
+                ${ratingHTML}
+            </div>
+            ${overview ? `<p class="lightbox-details-overview">${overview}</p>` : ''}
+        `;
+    } else {
+        detailsContainer.style.display = 'none';
+        detailsContainer.innerHTML = '';
+    }
+    
     lightbox.classList.add('active');
 };
 const lightboxEl = document.getElementById('media-lightbox');
@@ -136,6 +156,8 @@ if (lightboxEl) {
         if (e.target === lightboxEl || e.target === lightboxCloseEl) {
             lightboxEl.classList.remove('active');
             document.getElementById('lightbox-body').innerHTML = ''; // Stop video
+            const detailsContainer = document.getElementById('lightbox-details');
+            if (detailsContainer) detailsContainer.innerHTML = '';
         }
     });
 }
@@ -312,8 +334,8 @@ function initCarousel() {
 
 	if (carouselInterval) clearInterval(carouselInterval);
 
-	// Cambiar el fondo según la velocidad seleccionada (por defecto 6000ms)
-	const savedSpeed = parseInt(localStorage.getItem('backdrop-speed') || '6000', 10);
+	// Cambiar el fondo según la velocidad seleccionada (por defecto 30000ms)
+	const savedSpeed = parseInt(localStorage.getItem('backdrop-speed') || '30000', 10);
 	carouselInterval = setInterval(() => {
 		const backdropElements = BACKDROP_CONTAINER.querySelectorAll('.backdrop');
 		if (backdropElements.length <= 1) return;
@@ -519,7 +541,7 @@ if (bgOrderRadios.length > 0) {
 }
 
 if (bgSpeedRadios.length > 0) {
-	const currentSpeed = localStorage.getItem('backdrop-speed') || '6000';
+	const currentSpeed = localStorage.getItem('backdrop-speed') || '30000';
 	bgSpeedRadios.forEach(radio => {
 		if (radio.value === currentSpeed) {
 			radio.checked = true;
@@ -1251,8 +1273,10 @@ async function loadPopularTrailers() {
                 container.innerHTML = validTrailers.map(t => {
                     const videoEmbed = `<iframe src="https://www.youtube.com/embed/${t.key}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>`;
                     const escapedEmbed = videoEmbed.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
+                    const escapedTitle = t.movieTitle.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
+                    const escapedSub = t.trailerName.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
                     return `
-                        <div class="trailer-card" onclick="openLightbox('${escapedEmbed}')">
+                        <div class="trailer-card" onclick="openLightbox('${escapedEmbed}', '${escapedTitle}', '${escapedSub}')">
                             <img src="${t.backdrop}" alt="${t.movieTitle}" loading="lazy">
                             <div class="trailer-card-overlay">
                                 <h3 class="trailer-card-title">${t.movieTitle}</h3>
@@ -1590,6 +1614,7 @@ function renderMovieDetails(details, mediaType) {
         
         if (data) {
             const list = data.flatrate || data.buy || data.rent || [];
+            const watchLink = data.link || `https://www.justwatch.com/search?q=${encodeURIComponent(title)}`;
             if (list.length > 0) {
                 const seen = new Set();
                 const uniqueList = [];
@@ -1604,7 +1629,9 @@ function renderMovieDetails(details, mediaType) {
                         <span>AVAILABLE ON:</span>
                         <div class="provider-logos-row">
                             ${uniqueList.slice(0, 6).map(p => `
-                                <img src="https://image.tmdb.org/t/p/w92${p.logo_path}" alt="${p.provider_name}" class="provider-logo" title="${p.provider_name}">
+                                <a href="${watchLink}" target="_blank" rel="noopener noreferrer" title="Watch on ${p.provider_name}" class="provider-logo-link">
+                                    <img src="https://image.tmdb.org/t/p/w92${p.logo_path}" alt="${p.provider_name}" class="provider-logo">
+                                </a>
                             `).join('')}
                         </div>
                     </div>
@@ -1680,11 +1707,14 @@ function renderMovieDetails(details, mediaType) {
     }
 
     const mediaGridHTML = mediaItems.map(item => {
+        const escapedTitle = title.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
+        const escapedOverview = details.overview ? details.overview.replace(/"/g, '&quot;').replace(/'/g, '\\\'') : '';
+        
         if (item.type === 'video') {
             const videoEmbed = `<iframe src="https://www.youtube.com/embed/${item.key}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>`;
             const escapedEmbed = videoEmbed.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
             return `
-                <div class="media-capture-card" onclick="openLightbox('${escapedEmbed}')">
+                <div class="media-capture-card" onclick="openLightbox('${escapedEmbed}', '${escapedTitle}', '${escapedOverview}', '${year}', '${ratingStr}')">
                     <span class="video-badge">VIDEO</span>
                     <img src="${item.thumbnail}" alt="${item.title.replace(/"/g, '&quot;')}" loading="lazy">
                     <div class="play-overlay">
@@ -1696,7 +1726,7 @@ function renderMovieDetails(details, mediaType) {
             const imgHTML = `<img src="${item.fullUrl}" alt="${item.title}">`;
             const escapedImg = imgHTML.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
             return `
-                <div class="media-capture-card" onclick="openLightbox('${escapedImg}')">
+                <div class="media-capture-card" onclick="openLightbox('${escapedImg}', '${escapedTitle}', '${escapedOverview}', '${year}', '${ratingStr}')">
                     <img src="${item.url}" alt="${item.title}" loading="lazy">
                 </div>
             `;
@@ -1765,6 +1795,7 @@ function renderMovieDetails(details, mediaType) {
                         ${letterboxdLink}
                         ${imdbLink}
                         ${tmdbLink}
+                        <button class="trivia-btn" id="trivia-btn" title="Jugar Cine-Trivia">🏆 Trivia</button>
                     </div>
                 </div>
             </div>
@@ -1827,6 +1858,13 @@ function renderMovieDetails(details, mediaType) {
             if (document.getElementById('backdrop-settings-menu').classList.contains('active')) {
                 renderSettingsFavorites();
             }
+        });
+    }
+
+    const triviaBtnEl = document.getElementById('trivia-btn');
+    if (triviaBtnEl) {
+        triviaBtnEl.addEventListener('click', () => {
+            initCineTrivia(details);
         });
     }
 
@@ -2272,6 +2310,128 @@ function openActorDrawer(details) {
     const birthDate = details.birthday ? details.birthday : 'Unknown';
     const birthPlace = details.place_of_birth ? details.place_of_birth : 'Unknown';
     
+    // ─── Career Timeline (Horizontal SVG) ───
+    let timelineHTML = '';
+    let timelineCredits = [];
+
+    if (details.combined_credits && details.combined_credits.cast) {
+        timelineCredits = details.combined_credits.cast
+            .filter(c => c.release_date || c.first_air_date) // must have year
+            .filter(c => c.vote_average && c.vote_count > 15) // ensure rating validity
+            .sort((a, b) => b.popularity - a.popularity) // take most popular first
+            .slice(0, 15) // take top 15 (less cluttered)
+            .map(c => {
+                const dateStr = c.release_date || c.first_air_date;
+                const year = new Date(dateStr).getFullYear();
+                return {
+                    id: c.id,
+                    media_type: c.media_type,
+                    title: c.title || c.name,
+                    character: c.character || 'Unknown',
+                    rating: c.vote_average,
+                    year: year,
+                    poster: c.poster_path ? `https://image.tmdb.org/t/p/w154${c.poster_path}` : null
+                };
+            })
+            .sort((a, b) => a.year - b.year); // sort chronologically
+
+        if (timelineCredits.length > 0) {
+            // Generate timeline SVG
+            const height = 260;
+            const paddingTop = 35;
+            const paddingBottom = 55;
+            const paddingLeft = 45;
+            const paddingRight = 45;
+            const availableHeight = height - paddingTop - paddingBottom;
+            
+            const minYear = timelineCredits[0].year;
+            const maxYear = timelineCredits[timelineCredits.length - 1].year;
+            const yearRange = maxYear - minYear || 1;
+
+            // Compute positions with spacing push to avoid overlaps
+            const minSpacing = 70; // min pixels between nodes (less cluttered)
+            const availableWidth = Math.max(700, timelineCredits.length * minSpacing);
+            const xPositions = [];
+            
+            for (let i = 0; i < timelineCredits.length; i++) {
+                let x = paddingLeft + ((timelineCredits[i].year - minYear) / yearRange) * availableWidth;
+                if (i > 0 && x - xPositions[i-1] < minSpacing) {
+                    x = xPositions[i-1] + minSpacing;
+                }
+                xPositions.push(x);
+            }
+
+            const svgWidth = xPositions[xPositions.length - 1] + paddingRight;
+
+            // Y scale logic (rating 3 to 10)
+            const minRating = 3;
+            const maxRating = 10;
+            const yPositions = timelineCredits.map(c => {
+                const clamped = Math.max(minRating, Math.min(maxRating, c.rating));
+                return paddingTop + (1 - (clamped - minRating) / (maxRating - minRating)) * availableHeight;
+            });
+
+            // Grid lines (horizontal thresholds: 10, 8, 6, 4)
+            const gridRatings = [4, 6, 8, 10];
+            const gridLinesSVG = gridRatings.map(rating => {
+                const y = paddingTop + (1 - (rating - minRating) / (maxRating - minRating)) * availableHeight;
+                return `
+                    <line x1="${paddingLeft - 10}" y1="${y}" x2="${svgWidth - paddingRight + 10}" y2="${y}" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
+                    <text x="${paddingLeft - 22}" y="${y + 4}" fill="rgba(255,255,255,0.4)" font-size="10" font-family="system-ui, -apple-system, sans-serif" text-anchor="middle">${rating}</text>
+                `;
+            }).join('');
+
+            // Build path curves
+            let pathPoints = '';
+            let areaPoints = `L ${xPositions[xPositions.length - 1]} ${height - paddingBottom} L ${xPositions[0]} ${height - paddingBottom} Z`;
+            
+            for (let i = 0; i < timelineCredits.length; i++) {
+                pathPoints += `${i === 0 ? 'M' : 'L'} ${xPositions[i]} ${yPositions[i]} `;
+            }
+
+            // SVG Gradient & Glow filter
+            const defsSVG = `
+                <defs>
+                    <linearGradient id="timeline-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--accent, #e50914)" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="var(--accent, #e50914)" stop-opacity="0.0"/>
+                    </linearGradient>
+                    <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3.5" result="blur" />
+                        <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+            `;
+
+            // Render movie nodes with higher contrast white years
+            const nodesSVG = timelineCredits.map((c, i) => {
+                return `
+                    <g class="timeline-node" data-index="${i}" style="cursor: pointer;">
+                        <circle cx="${xPositions[i]}" cy="${yPositions[i]}" r="6" fill="#080c18" stroke="var(--accent, #e50914)" stroke-width="3" style="transition: all 0.15s ease;" />
+                        <text x="${xPositions[i]}" y="${height - paddingBottom + 25}" fill="#fff" font-size="11" font-family="system-ui, -apple-system, sans-serif" font-weight="700" text-anchor="middle">${c.year}</text>
+                    </g>
+                `;
+            }).join('');
+
+            timelineHTML = `
+                <div class="actor-timeline-title">CAREER TIMELINE</div>
+                <div class="actor-timeline-scroll">
+                    <svg class="actor-timeline-svg" width="${svgWidth}" height="${height}">
+                        ${defsSVG}
+                        ${gridLinesSVG}
+                        <path d="${pathPoints} ${areaPoints}" fill="url(#timeline-area-gradient)" />
+                        <path d="${pathPoints}" fill="none" stroke="var(--accent, #e50914)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-filter)" />
+                        ${nodesSVG}
+                    </svg>
+                </div>
+            `;
+        }
+    }
+
+    // ─── Known For (Slider) ───
     let creditsHTML = '';
     if (details.combined_credits && details.combined_credits.cast) {
         const sortedCredits = details.combined_credits.cast
@@ -2284,7 +2444,7 @@ function openActorDrawer(details) {
                 <h4 class="actor-credits-title">KNOWN FOR</h4>
                 <div class="actor-credits-slider">
                     ${sortedCredits.map(c => `
-                        <div class="actor-credit-card" data-id="${c.id}" data-type="${c.media_type}">
+                        <div class="actor-credit-card" data-id="${c.id}" data-type="${c.media_type}" data-title="${c.title || c.name}">
                             <img src="https://image.tmdb.org/t/p/w185${c.poster_path}" alt="${c.title || c.name}" class="actor-credit-poster" loading="lazy">
                             <span class="actor-credit-title">${c.title || c.name}</span>
                         </div>
@@ -2294,6 +2454,7 @@ function openActorDrawer(details) {
         }
     }
 
+    // Populate drawer body
     body.innerHTML = `
         <div class="actor-profile-header">
             <img src="${avatar}" alt="${details.name}" class="actor-profile-avatar">
@@ -2304,21 +2465,134 @@ function openActorDrawer(details) {
             <span class="actor-profile-meta-item"><strong>Born:</strong> ${birthDate}</span>
             <span class="actor-profile-meta-item"><strong>Place of birth:</strong> ${birthPlace}</span>
         </div>
-        <p class="actor-profile-bio">${details.biography || 'No biography available for this artist.'}</p>
+        ${timelineHTML}
         ${creditsHTML}
+        <h4 class="actor-timeline-title">Biography</h4>
+        <p class="actor-profile-bio">${details.biography || 'No biography available for this artist.'}</p>
+        <div id="actor-timeline-tooltip" class="actor-timeline-tooltip"></div>
     `;
 
     drawer.classList.add('active');
     backdrop.classList.add('active');
 
+    // Add interactivity to timeline nodes
+    const tooltip = document.getElementById('actor-timeline-tooltip');
+    const scrollContainer = body.querySelector('.actor-timeline-scroll');
+
+    if (scrollContainer && tooltip) {
+        const nodes = scrollContainer.querySelectorAll('.timeline-node');
+        nodes.forEach(node => {
+            const idx = parseInt(node.dataset.index);
+            const c = timelineCredits[idx];
+
+            const showTooltip = () => {
+                node.querySelector('circle').setAttribute('r', '9');
+                node.querySelector('circle').setAttribute('fill', 'var(--accent, #e50914)');
+
+                tooltip.innerHTML = `
+                    <img src="${c.poster || 'https://via.placeholder.com/48x72/111424/ffffff?text=N/A'}" class="tooltip-poster">
+                    <div class="tooltip-info">
+                        <div class="tooltip-title">${c.title}</div>
+                        <div class="tooltip-role">${c.character}</div>
+                        <div class="tooltip-year-rating">
+                            <span class="tooltip-rating-star">★</span>
+                            <span>${c.rating.toFixed(1)}/10</span>
+                            <span style="color: rgba(255,255,255,0.4); margin-left: 4px;">(${c.year})</span>
+                        </div>
+                    </div>
+                `;
+                
+                // Absolute screen coordinates math for perfect positioning
+                const circleEl = node.querySelector('circle');
+                const rect = circleEl.getBoundingClientRect();
+                const drawerRect = drawer.getBoundingClientRect();
+                
+                const cxVal = rect.left - drawerRect.left + (rect.width / 2);
+                const cyVal = rect.top - drawerRect.top + (rect.height / 2);
+                
+                const drawerWidth = drawer.clientWidth || 420;
+                const tooltipWidth = 230;
+                const halfWidth = tooltipWidth / 2;
+                
+                const minLeft = halfWidth + 15;
+                const maxLeft = drawerWidth - halfWidth - 15;
+                const clampedLeft = Math.max(minLeft, Math.min(maxLeft, cxVal));
+                
+                const arrowOffset = cxVal - clampedLeft;
+                const arrowPercent = 50 + (arrowOffset / tooltipWidth) * 100;
+                
+                tooltip.style.left = clampedLeft + 'px';
+                tooltip.style.top = (cyVal - 16) + 'px';
+                tooltip.style.setProperty('--tooltip-arrow-left', `${arrowPercent}%`);
+                tooltip.classList.add('active');
+            };
+
+            const hideTooltip = () => {
+                node.querySelector('circle').setAttribute('r', '6');
+                node.querySelector('circle').setAttribute('fill', '#080c18');
+                tooltip.classList.remove('active');
+            };
+
+            node.addEventListener('mouseenter', showTooltip);
+            node.addEventListener('mouseleave', hideTooltip);
+            
+            // Allow tap/click on node to toggle tooltip or load movie
+            node.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                // If it's a mobile touch, show tooltip first, otherwise load details directly
+                if (window.matchMedia("(max-width: 768px)").matches && !tooltip.classList.contains('active')) {
+                    showTooltip();
+                } else {
+                    hideTooltip();
+                    const id = c.id;
+                    const type = c.media_type || 'movie';
+                    const lang = navigator.language || 'es-MX';
+                    
+                    drawer.classList.remove('active');
+                    backdrop.classList.remove('active');
+                    
+                    // Set search bar input value
+                    const searchInput = document.getElementById('search-query');
+                    if (searchInput) {
+                        searchInput.value = c.title;
+                    }
+                    
+                    saveCurrentState();
+                    window.scrollTo({ top: 30, behavior: 'smooth' });
+                    
+                    try {
+                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
+                        const mediaDetails = await detailsRes.json();
+                        renderMovieDetails(mediaDetails, type);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            });
+        });
+
+        // Hide tooltip on scroll
+        scrollContainer.addEventListener('scroll', () => {
+            tooltip.classList.remove('active');
+        });
+    }
+
+    // Add interactivity to "Known For" slider cards
     body.querySelectorAll('.actor-credit-card').forEach(card => {
         card.addEventListener('click', async () => {
             const id = card.dataset.id;
             const type = card.dataset.type || 'movie';
+            const title = card.dataset.title;
             const lang = navigator.language || 'es-MX';
             
             drawer.classList.remove('active');
             backdrop.classList.remove('active');
+            
+            // Set search bar input value
+            const searchInput = document.getElementById('search-query');
+            if (searchInput && title) {
+                searchInput.value = title;
+            }
             
             saveCurrentState();
             window.scrollTo({ top: 30, behavior: 'smooth' });
@@ -2351,4 +2625,321 @@ function initActorDrawerEvents() {
 }
 
 initActorDrawerEvents();
+
+/* ── Cine-Trivia & Theme Store Minigame ────────────────────────── */
+function generateTriviaQuestions(details) {
+    const qs = [];
+    
+    // Question 1: Year of release
+    const year = (details.release_date || details.first_air_date || '').split('-')[0];
+    if (year) {
+        const yr = parseInt(year);
+        const incorrectYears = [yr - 2, yr + 1, yr - 4, yr + 3].filter(y => y !== yr);
+        const options = [yr.toString(), ...incorrectYears.map(y => y.toString())].slice(0, 4);
+        qs.push({
+            text: `¿En qué año se estrenó "${details.title || details.name}"?`,
+            options: shuffleArray(options),
+            correctAnswer: yr.toString()
+        });
+    }
+    
+    // Question 2: Director
+    let directorName = '';
+    if (details.credits && details.credits.crew) {
+        const dirObj = details.credits.crew.find(c => c.job === 'Director' || c.job === 'Executive Producer' || c.job === 'Series Director');
+        if (dirObj) directorName = dirObj.name;
+    }
+    if (directorName) {
+        const famousDirectors = ['Christopher Nolan', 'Steven Spielberg', 'Quentin Tarantino', 'Martin Scorsese', 'James Cameron', 'Guillermo del Toro', 'Denis Villeneuve', 'Greta Gerwig'];
+        const incorrectDirs = famousDirectors.filter(d => d.toLowerCase() !== directorName.toLowerCase()).slice(0, 3);
+        const options = [directorName, ...incorrectDirs];
+        qs.push({
+            text: `¿Quién dirigió la producción "${details.title || details.name}"?`,
+            options: shuffleArray(options),
+            correctAnswer: directorName
+        });
+    }
+
+    // Question 3: Cast
+    let characterName = '';
+    let actorName = '';
+    if (details.credits && details.credits.cast && details.credits.cast.length > 0) {
+        const validCast = details.credits.cast.filter(c => c.character && c.name);
+        if (validCast.length > 0) {
+            const selected = validCast[0];
+            actorName = selected.name;
+            characterName = selected.character;
+        }
+    }
+    if (characterName && actorName) {
+        const famousActors = ['Leonardo DiCaprio', 'Brad Pitt', 'Scarlett Johansson', 'Morgan Freeman', 'Robert Downey Jr.', 'Meryl Streep', 'Tom Hanks', 'Jennifer Lawrence'];
+        const incorrectActors = famousActors.filter(a => a.toLowerCase() !== actorName.toLowerCase()).slice(0, 3);
+        const options = [actorName, ...incorrectActors];
+        qs.push({
+            text: `¿Qué actor interpretó al personaje "${characterName}" en esta producción?`,
+            options: shuffleArray(options),
+            correctAnswer: actorName
+        });
+    }
+
+    // Fallback genre question
+    if (qs.length < 3 && details.genres && details.genres.length > 0) {
+        const mainGenre = details.genres[0].name;
+        const genericGenres = ['Acción', 'Comedia', 'Terror', 'Drama', 'Documental', 'Ciencia Ficción', 'Aventura', 'Romance'];
+        const incorrectGenres = genericGenres.filter(g => g.toLowerCase() !== mainGenre.toLowerCase()).slice(0, 3);
+        const options = [mainGenre, ...incorrectGenres];
+        qs.push({
+            text: `¿A qué género principal pertenece "${details.title || details.name}"?`,
+            options: shuffleArray(options),
+            correctAnswer: mainGenre
+        });
+    }
+
+    // Absolute fallback
+    while (qs.length < 3) {
+        qs.push({
+            text: `¿Cuál es el sitio oficial de base de datos de películas utilizado en esta app?`,
+            options: shuffleArray(['TMDB (The Movie Database)', 'IMDb', 'Wikipedia', 'Metacritic']),
+            correctAnswer: 'TMDB (The Movie Database)'
+          });
+    }
+
+    return qs.slice(0, 3);
+}
+
+function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function initCineTrivia(movieDetails) {
+    const modal = document.getElementById('trivia-modal');
+    if (!modal) return;
+    
+    modal.classList.add('active');
+    
+    // Wire tabs
+    const tabQuiz = document.getElementById('trivia-tab-quiz');
+    const tabStore = document.getElementById('trivia-tab-store');
+    
+    tabQuiz.className = 'trivia-tab-btn active';
+    tabStore.className = 'trivia-tab-btn';
+    
+    let credits = parseInt(localStorage.getItem('trivia_credits') || '0');
+    document.getElementById('trivia-credits-value').textContent = credits;
+    
+    let questions = generateTriviaQuestions(movieDetails);
+    let currentQuestionIndex = 0;
+    let correctCount = 0;
+    
+    const showQuizTab = () => {
+        tabQuiz.className = 'trivia-tab-btn active';
+        tabStore.className = 'trivia-tab-btn';
+        renderQuizQuestion(questions, currentQuestionIndex, correctCount, movieDetails);
+    };
+    
+    const showStoreTab = () => {
+        tabQuiz.className = 'trivia-tab-btn';
+        tabStore.className = 'trivia-tab-btn active';
+        renderStore();
+    };
+    
+    tabQuiz.onclick = showQuizTab;
+    tabStore.onclick = showStoreTab;
+    
+    showQuizTab();
+}
+
+function renderQuizQuestion(questions, index, correctCount, movieDetails) {
+    const body = document.getElementById('trivia-body');
+    if (!body) return;
+    
+    if (index >= questions.length) {
+        const creditsEarned = correctCount * 10;
+        let credits = parseInt(localStorage.getItem('trivia_credits') || '0');
+        credits += creditsEarned;
+        localStorage.setItem('trivia_credits', credits.toString());
+        document.getElementById('trivia-credits-value').textContent = credits;
+        
+        body.innerHTML = `
+            <div style="text-align: center; color: #fff;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+                <h4 style="font-size: 1.1rem; font-weight: 800; margin: 0 0 10px 0;">¡QUIZ TERMINADO!</h4>
+                <p style="font-size: 0.88rem; color: rgba(255,255,255,0.7); margin-bottom: 20px;">
+                    Respuestas correctas: <strong>${correctCount} / ${questions.length}</strong>.<br>
+                    Has ganado: <strong style="color: #ffb703;">${creditsEarned} créditos</strong>.
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="store-item-action" id="trivia-replay-btn" style="background: var(--accent); color: #000; padding: 10px 20px; font-size: 0.85rem; border-radius: 12px; font-weight: 700; width: 130px;">Jugar de nuevo</button>
+                    <button class="store-item-action" id="trivia-close-modal-btn" style="padding: 10px 20px; font-size: 0.85rem; border-radius: 12px; font-weight: 700; width: 130px;">Cerrar</button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('trivia-replay-btn').onclick = () => {
+            initCineTrivia(movieDetails);
+        };
+        
+        document.getElementById('trivia-close-modal-btn').onclick = () => {
+            document.getElementById('trivia-modal').classList.remove('active');
+        };
+        return;
+    }
+    
+    const q = questions[index];
+    
+    body.innerHTML = `
+        <div class="trivia-question-box">
+            <span style="font-size: 0.76rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Pregunta ${index + 1} de ${questions.length}</span>
+            ${q.text}
+        </div>
+        <div class="trivia-answers-grid">
+            ${q.options.map(opt => `
+                <button class="trivia-answer-btn" data-value="${opt.replace(/"/g, '&quot;')}">${opt}</button>
+            `).join('')}
+        </div>
+    `;
+    
+    const btns = body.querySelectorAll('.trivia-answer-btn');
+    let answered = false;
+    
+    btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (answered) return;
+            answered = true;
+            
+            const selected = btn.dataset.value;
+            const isCorrect = selected === q.correctAnswer;
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                correctCount++;
+            } else {
+                btn.classList.add('wrong');
+                btns.forEach(b => {
+                    if (b.dataset.value === q.correctAnswer) {
+                        b.classList.add('correct');
+                    }
+                });
+            }
+            
+            setTimeout(() => {
+                renderQuizQuestion(questions, index + 1, correctCount, movieDetails);
+            }, 1500);
+        });
+    });
+}
+
+function renderStore() {
+    const body = document.getElementById('trivia-body');
+    if (!body) return;
+    
+    const themesList = [
+        { id: 'default', name: 'Neon Cyber Classic', cost: 0, colors: ['#fff', 'rgba(255, 122, 224, 0.7)', 'rgba(122, 95, 255, 0.5)'] },
+        { id: 'matrix', name: 'Matrix Green', cost: 40, colors: ['#00ff66', 'rgba(0, 255, 102, 0.8)', 'rgba(0, 255, 102, 0.15)'] },
+        { id: 'interstellar', name: 'Interstellar Blue', cost: 60, colors: ['#00d2ff', 'rgba(0, 210, 255, 0.8)', 'rgba(0, 100, 255, 0.15)'] },
+        { id: 'barbie', name: 'Barbie Pink', cost: 80, colors: ['#ff007f', 'rgba(255, 0, 127, 0.8)', 'rgba(255, 0, 127, 0.15)'] },
+        { id: 'cyberpunk', name: 'Cyberpunk Gold', cost: 100, colors: ['#ffb703', 'rgba(255, 183, 3, 0.8)', 'rgba(255, 183, 3, 0.15)'] }
+    ];
+    
+    let unlocked = [];
+    try {
+        unlocked = JSON.parse(localStorage.getItem('unlocked_themes') || '["default"]');
+    } catch(e) {
+        unlocked = ['default'];
+    }
+    
+    let activeTheme = localStorage.getItem('active_theme') || 'default';
+    let credits = parseInt(localStorage.getItem('trivia_credits') || '0');
+    
+    body.innerHTML = `
+        <div class="trivia-store-list">
+            ${themesList.map(theme => {
+                const isUnlocked = unlocked.includes(theme.id);
+                const isActive = activeTheme === theme.id;
+                
+                let btnHTML = '';
+                if (isActive) {
+                    btnHTML = `<button class="store-item-action active-theme">Equipado</button>`;
+                } else if (isUnlocked) {
+                    btnHTML = `<button class="store-item-action equip-theme-btn" data-theme="${theme.id}">Equipar</button>`;
+                } else {
+                    btnHTML = `<button class="store-item-action buy-theme-btn" data-theme="${theme.id}" data-cost="${theme.cost}">Comprar por ${theme.cost}🪙</button>`;
+                }
+                
+                return `
+                    <div class="trivia-store-item">
+                        <div class="store-item-info">
+                            <span class="store-item-name">${theme.name}</span>
+                            <div class="store-item-colors">
+                                ${theme.colors.map(c => `
+                                    <div class="store-color-dot" style="background: ${c};"></div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ${btnHTML}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    
+    body.querySelectorAll('.equip-theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const th = btn.dataset.theme;
+            localStorage.setItem('active_theme', th);
+            if (th === 'default') {
+                document.documentElement.className = '';
+            } else {
+                document.documentElement.className = `theme-${th}`;
+            }
+            renderStore();
+        });
+    });
+    
+    body.querySelectorAll('.buy-theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const th = btn.dataset.theme;
+            const cost = parseInt(btn.dataset.cost);
+            
+            if (credits >= cost) {
+                credits -= cost;
+                localStorage.setItem('trivia_credits', credits.toString());
+                document.getElementById('trivia-credits-value').textContent = credits;
+                
+                unlocked.push(th);
+                localStorage.setItem('unlocked_themes', JSON.stringify(unlocked));
+                localStorage.setItem('active_theme', th);
+                document.documentElement.className = `theme-${th}`;
+                
+                renderStore();
+            } else {
+                alert("¡No tienes suficientes créditos! Juega quizzes de trivia para ganar créditos.");
+            }
+        });
+    });
+}
+
+function initTriviaModalEvents() {
+    const modal = document.getElementById('trivia-modal');
+    const closeBtn = document.getElementById('trivia-close-btn');
+    if (!modal || !closeBtn) return;
+    
+    const closeModal = () => {
+        modal.classList.remove('active');
+    };
+    closeBtn.addEventListener('click', closeModal);
+    
+    // Close modal when clicking on the background backdrop overlay
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+initTriviaModalEvents();
 

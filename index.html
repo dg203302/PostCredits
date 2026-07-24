@@ -28,37 +28,54 @@
             height: 72px;
             border-radius: 50%;
             border: none;
-            background: linear-gradient(135deg, var(--title-color, #e50914) 0%, var(--title-glow-dim, rgba(229,9,20,0.5)) 100%);
+            background: linear-gradient(135deg, var(--title-color, #e50914) 0%, var(--title-glow-dim, rgba(229, 9, 20, 0.5)) 100%);
             color: #fff;
             cursor: grab;
             z-index: 9999;
-            box-shadow: 0 6px 32px var(--title-glow, rgba(229,9,20,0.6)), 0 0 0 0 var(--title-glow-dimmer, rgba(229,9,20,0.3));
+            box-shadow: 0 6px 32px var(--title-glow, rgba(229, 9, 20, 0.6)), 0 0 0 0 var(--title-glow-dimmer, rgba(229, 9, 20, 0.3));
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: box-shadow 0.2s ease, background 0.4s ease, left 0.32s cubic-bezier(0.34,1.56,0.64,1), top 0.32s cubic-bezier(0.34,1.56,0.64,1);
+            transition: box-shadow 0.2s ease, background 0.4s ease, left 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
             animation: chat-pulse 3.5s ease-in-out infinite;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
-        #chat-fab:active { cursor: grabbing; }
+
+        #chat-fab:active {
+            cursor: grabbing;
+        }
+
         #chat-fab.dragging {
             animation: none;
-            box-shadow: 0 12px 48px var(--title-glow, rgba(229,9,20,0.75));
+            box-shadow: 0 12px 48px var(--title-glow, rgba(229, 9, 20, 0.75));
             cursor: grabbing;
             transition: box-shadow 0.2s ease, background 0.4s ease;
         }
+
         #chat-fab.open {
-            background: linear-gradient(135deg, rgba(20,20,30,0.95) 0%, rgba(10,10,20,0.98) 100%);
-            box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+            background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
             animation: none;
         }
-        #chat-fab svg { pointer-events: none; }
+
+        #chat-fab svg {
+            pointer-events: none;
+        }
+
         @keyframes chat-pulse {
-            0%   { box-shadow: 0 6px 32px var(--title-glow, rgba(229,9,20,0.6)), 0 0 0 0   var(--title-glow-dimmer, rgba(229,9,20,0.3)); }
-            60%  { box-shadow: 0 6px 32px var(--title-glow, rgba(229,9,20,0.6)), 0 0 0 20px transparent; }
-            100% { box-shadow: 0 6px 32px var(--title-glow, rgba(229,9,20,0.6)), 0 0 0 0   transparent; }
+            0% {
+                box-shadow: 0 6px 32px var(--title-glow, rgba(229, 9, 20, 0.6)), 0 0 0 0 var(--title-glow-dimmer, rgba(229, 9, 20, 0.3));
+            }
+
+            60% {
+                box-shadow: 0 6px 32px var(--title-glow, rgba(229, 9, 20, 0.6)), 0 0 0 20px transparent;
+            }
+
+            100% {
+                box-shadow: 0 6px 32px var(--title-glow, rgba(229, 9, 20, 0.6)), 0 0 0 0 transparent;
+            }
         }
 
         /* Chat Window */
@@ -69,14 +86,14 @@
             height: 520px;
             max-height: calc(100dvh - 100px);
             border-radius: 22px;
-            background: var(--search-bg, rgba(8,8,14,0.88));
+            background: var(--search-bg, rgba(8, 8, 14, 0.88));
             backdrop-filter: blur(32px) saturate(180%);
             -webkit-backdrop-filter: blur(32px) saturate(180%);
-            border: 1px solid rgba(255,255,255,0.09);
+            border: 1px solid rgba(255, 255, 255, 0.09);
             box-shadow:
-                0 32px 80px rgba(0,0,0,0.75),
-                0 0 0 1px var(--title-glow-dimmer, rgba(229,9,20,0.08)),
-                inset 0 1px 0 rgba(255,255,255,0.06);
+                0 32px 80px rgba(0, 0, 0, 0.75),
+                0 0 0 1px var(--title-glow-dimmer, rgba(229, 9, 20, 0.08)),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
             display: flex;
             flex-direction: column;
             z-index: 9998;
@@ -85,8 +102,9 @@
             pointer-events: none;
             transform-origin: bottom right;
             transform: scale(0.88) translateY(12px);
-            transition: transform 0.32s cubic-bezier(0.34,1.56,0.64,1), opacity 0.22s ease;
+            transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease;
         }
+
         #chat-window.visible {
             transform: scale(1) translateY(0);
             opacity: 1;
@@ -98,60 +116,72 @@
             content: '';
             display: block;
             height: 2px;
-            background: linear-gradient(90deg, var(--title-color, #e50914), var(--title-glow, rgba(229,9,20,0.5)), transparent);
+            background: linear-gradient(90deg, var(--title-color, #e50914), var(--title-glow, rgba(229, 9, 20, 0.5)), transparent);
             flex-shrink: 0;
         }
 
         /* Header */
         #chat-header {
             padding: 12px 16px;
-            background: linear-gradient(135deg, var(--title-glow-dimmer, rgba(229,9,20,0.12)) 0%, rgba(255,255,255,0.02) 100%);
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            background: linear-gradient(135deg, var(--title-glow-dimmer, rgba(229, 9, 20, 0.12)) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
             display: flex;
             align-items: center;
             gap: 10px;
             flex-shrink: 0;
         }
+
         .chat-avatar {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--title-color, #e50914), var(--title-glow-dim, rgba(229,9,20,0.5)));
+            background: linear-gradient(135deg, var(--title-color, #e50914), var(--title-glow-dim, rgba(229, 9, 20, 0.5)));
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.1rem;
             flex-shrink: 0;
-            box-shadow: 0 0 14px var(--title-glow-dim, rgba(229,9,20,0.4));
+            box-shadow: 0 0 14px var(--title-glow-dim, rgba(229, 9, 20, 0.4));
         }
-        .chat-meta { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+
+        .chat-meta {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+
         .chat-name {
             font-size: 0.88rem;
             font-weight: 700;
             color: #fff;
             letter-spacing: 0.03em;
         }
+
         .chat-status {
             font-size: 0.7rem;
-            color: rgba(255,255,255,0.38);
+            color: rgba(255, 255, 255, 0.38);
             display: flex;
             align-items: center;
             gap: 4px;
         }
+
         .chat-status::before {
             content: '';
-            width: 6px; height: 6px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #22c55e;
-            box-shadow: 0 0 6px rgba(34,197,94,0.6);
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
             display: inline-block;
         }
+
         .chat-movie-tag {
             font-size: 0.68rem;
             padding: 3px 9px;
             border-radius: 20px;
-            background: var(--title-glow-dimmer, rgba(229,9,20,0.15));
-            border: 1px solid var(--title-glow-dim, rgba(229,9,20,0.3));
+            background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.15));
+            border: 1px solid var(--title-glow-dim, rgba(229, 9, 20, 0.3));
             color: var(--title-color, #ff6b6b);
             max-width: 100px;
             white-space: nowrap;
@@ -159,12 +189,14 @@
             text-overflow: ellipsis;
             flex-shrink: 0;
         }
+
         #chat-close-btn {
-            width: 28px; height: 28px;
+            width: 28px;
+            height: 28px;
             border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.06);
-            color: rgba(255,255,255,0.55);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.55);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -174,33 +206,42 @@
             font-size: 1rem;
             line-height: 1;
         }
+
         #chat-close-btn:hover {
-            background: var(--title-glow-dimmer, rgba(229,9,20,0.2));
+            background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.2));
             color: var(--title-color, #ff6b6b);
-            border-color: var(--title-glow-dim, rgba(229,9,20,0.3));
+            border-color: var(--title-glow-dim, rgba(229, 9, 20, 0.3));
         }
 
         /* Expand Button */
         #chat-expand-btn {
-            width: 28px; height: 28px;
+            width: 28px;
+            height: 28px;
             border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.06);
-            color: rgba(255,255,255,0.55);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.55);
             cursor: pointer;
-            display: none; /* Hidden on mobile by default */
+            display: none;
+            /* Hidden on mobile by default */
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
             transition: background 0.15s, color 0.15s;
             margin-right: 4px;
         }
+
         #chat-expand-btn:hover {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
             color: #fff;
         }
+
         @media (min-width: 769px) {
-            #chat-expand-btn { display: flex; } /* Show only on desktop */
+            #chat-expand-btn {
+                display: flex;
+            }
+
+            /* Show only on desktop */
         }
 
         /* Markdown lists style */
@@ -221,13 +262,19 @@
             flex-direction: column;
             gap: 8px;
             scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.08) transparent;
-            overscroll-behavior: contain;   /* don't propagate scroll to page behind */
-            touch-action: pan-y;            /* allow vertical scroll, no page drag */
+            scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+            overscroll-behavior: contain;
+            /* don't propagate scroll to page behind */
+            touch-action: pan-y;
+            /* allow vertical scroll, no page drag */
         }
-        #chat-messages::-webkit-scrollbar { width: 4px; }
+
+        #chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
         #chat-messages::-webkit-scrollbar-thumb {
-            background: var(--title-glow-dimmer, rgba(255,255,255,0.1));
+            background: var(--title-glow-dimmer, rgba(255, 255, 255, 0.1));
             border-radius: 4px;
         }
 
@@ -237,30 +284,61 @@
             border-radius: 16px;
             font-size: 0.84rem;
             line-height: 1.55;
-            animation: msg-in 0.22s cubic-bezier(0.34,1.56,0.64,1);
+            animation: msg-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
             word-break: break-word;
         }
-        @keyframes msg-in {
-            from { opacity: 0; transform: translateY(10px) scale(0.95); }
-            to   { opacity: 1; transform: translateY(0)  scale(1); }
+
+        .chat-msg h1,
+        .chat-msg h2,
+        .chat-msg h3 {
+            margin: 10px 0 4px 0;
+            color: #fff;
+            font-weight: 700;
         }
+
+        .chat-msg h1 {
+            font-size: 1.05rem;
+        }
+
+        .chat-msg h2 {
+            font-size: 0.95rem;
+        }
+
+        .chat-msg h3 {
+            font-size: 0.88rem;
+        }
+
+        @keyframes msg-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
         .chat-msg.bot {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.07);
-            color: rgba(255,255,255,0.88);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            color: rgba(255, 255, 255, 0.88);
             border-bottom-left-radius: 4px;
             align-self: flex-start;
         }
+
         .chat-msg.user {
-            background: linear-gradient(135deg, var(--title-color, #e50914) 0%, var(--title-glow-dim, rgba(229,9,20,0.7)) 100%);
+            background: linear-gradient(135deg, var(--title-color, #e50914) 0%, var(--title-glow-dim, rgba(229, 9, 20, 0.7)) 100%);
             color: #fff;
             border-bottom-right-radius: 4px;
             align-self: flex-end;
-            box-shadow: 0 3px 14px var(--title-glow-dimmer, rgba(229,9,20,0.38));
+            box-shadow: 0 3px 14px var(--title-glow-dimmer, rgba(229, 9, 20, 0.38));
         }
+
         .chat-msg.error {
-            background: rgba(239,68,68,0.1);
-            border: 1px solid rgba(239,68,68,0.2);
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
             color: #fca5a5;
             border-radius: 12px;
             align-self: center;
@@ -268,26 +346,51 @@
             text-align: center;
             max-width: 90%;
         }
+
         .chat-msg.typing {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.07);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.07);
             align-self: flex-start;
             border-bottom-left-radius: 4px;
             padding: 12px 16px;
         }
-        .typing-dots { display: flex; gap: 4px; align-items: center; }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
         .typing-dots span {
             display: block;
-            width: 6px; height: 6px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background: var(--title-glow-dim, rgba(255,255,255,0.35));
+            background: var(--title-glow-dim, rgba(255, 255, 255, 0.35));
             animation: dot-bounce 1.3s ease-in-out infinite;
         }
-        .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
-        .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
         @keyframes dot-bounce {
-            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
-            40%            { transform: translateY(-5px); opacity: 1; }
+
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.35;
+            }
+
+            40% {
+                transform: translateY(-5px);
+                opacity: 1;
+            }
         }
 
         /* Date separator */
@@ -295,30 +398,34 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: rgba(255,255,255,0.2);
+            color: rgba(255, 255, 255, 0.2);
             font-size: 0.7rem;
             padding: 4px 0;
         }
-        .chat-separator::before, .chat-separator::after {
-            content: ''; flex: 1;
+
+        .chat-separator::before,
+        .chat-separator::after {
+            content: '';
+            flex: 1;
             height: 1px;
-            background: rgba(255,255,255,0.07);
+            background: rgba(255, 255, 255, 0.07);
         }
 
         /* Input area */
         #chat-input-area {
             padding: 10px 12px;
-            border-top: 1px solid rgba(255,255,255,0.07);
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
             display: flex;
             gap: 8px;
             align-items: flex-end;
             flex-shrink: 0;
-            background: rgba(0,0,0,0.25);
+            background: rgba(0, 0, 0, 0.25);
         }
+
         #chat-input {
             flex: 1;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 14px;
             padding: 9px 14px;
             color: #fff;
@@ -331,16 +438,156 @@
             line-height: 1.45;
             transition: border-color 0.2s, background 0.2s;
         }
-        #chat-input::placeholder { color: rgba(255,255,255,0.25); }
-        #chat-input:focus {
-            border-color: var(--title-glow-dim, rgba(229,9,20,0.45));
-            background: rgba(255,255,255,0.07);
+
+        #chat-input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
         }
+
+        #chat-input:focus {
+            border-color: var(--title-glow-dim, rgba(229, 9, 20, 0.45));
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        /* Quick Actions Bar */
+        .chat-quick-actions {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-shrink: 0;
+        }
+        .chat-quick-actions::-webkit-scrollbar {
+            display: none;
+        }
+        .chat-quick-action-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 6px 12px;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .chat-quick-action-btn:hover {
+            background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.12));
+            border-color: var(--title-glow-dim, rgba(229, 9, 20, 0.4));
+            color: var(--title-color, #ff6b6b);
+            transform: translateY(-1px);
+        }
+        .chat-quick-action-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Chat Quiz Choices Container */
+        .chat-quiz-choices-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+            padding: 0 4px;
+            animation: msg-in 0.22s ease;
+        }
+
+        /* Recommendation Card inside Chat */
+        .chat-rec-card {
+            padding: 14px !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            width: calc(100% - 24px);
+            margin: 8px 12px 8px auto !important;
+            box-sizing: border-box;
+            border-radius: 16px !important;
+        }
+        .rec-card-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .rec-card-poster {
+            width: 48px;
+            height: 72px;
+            border-radius: 6px;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+        .rec-card-meta {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+            flex: 1;
+        }
+        .rec-card-title {
+            margin: 0 0 3px 0;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #fff;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .rec-card-year {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 4px;
+        }
+        .rec-card-rating {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent, var(--title-color, #e50914));
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .rec-card-star {
+            color: #ffc107;
+            font-size: 0.76rem;
+        }
+        .rec-card-overview {
+            margin: 0 0 12px 0;
+            font-size: 0.76rem;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.75);
+            text-align: justify;
+        }
+        .rec-card-btn {
+            width: 100%;
+            padding: 8px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--title-color, #e50914), var(--title-glow-dim, rgba(229,9,20,0.7))) !important;
+            border: none;
+            color: #fff !important;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+            box-shadow: 0 4px 10px rgba(229,9,20,0.25);
+        }
+        .rec-card-btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.95;
+        }
+        .rec-card-btn:active {
+            transform: translateY(0);
+        }
+
         #chat-send-btn {
-            width: 38px; height: 38px;
+            width: 38px;
+            height: 38px;
             border-radius: 12px;
             border: none;
-            background: linear-gradient(135deg, var(--title-color, #e50914), var(--title-glow-dim, rgba(229,9,20,0.7)));
+            background: linear-gradient(135deg, var(--title-color, #e50914), var(--title-glow-dim, rgba(229, 9, 20, 0.7)));
             color: #fff;
             cursor: pointer;
             display: flex;
@@ -348,19 +595,25 @@
             justify-content: center;
             flex-shrink: 0;
             transition: transform 0.15s ease, opacity 0.15s, box-shadow 0.15s;
-            box-shadow: 0 2px 10px var(--title-glow-dimmer, rgba(229,9,20,0.3));
+            box-shadow: 0 2px 10px var(--title-glow-dimmer, rgba(229, 9, 20, 0.3));
         }
+
         #chat-send-btn:hover:not(:disabled) {
             transform: scale(1.1);
-            box-shadow: 0 4px 18px var(--title-glow, rgba(229,9,20,0.55));
+            box-shadow: 0 4px 18px var(--title-glow, rgba(229, 9, 20, 0.55));
         }
-        #chat-send-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+        #chat-send-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
 
         /* Clear chat button */
         #chat-clear-btn {
             background: none;
             border: none;
-            color: rgba(255,255,255,0.2);
+            color: rgba(255, 255, 255, 0.2);
             font-size: 0.68rem;
             cursor: pointer;
             padding: 0;
@@ -369,7 +622,10 @@
             white-space: nowrap;
             align-self: center;
         }
-        #chat-clear-btn:hover { color: var(--title-color, rgba(229,9,20,0.7)); }
+
+        #chat-clear-btn:hover {
+            color: var(--title-color, rgba(229, 9, 20, 0.7));
+        }
 
         /* ── Mobile bottom-sheet ─────────────────────────────────── */
         @media (max-width: 768px) {
@@ -379,13 +635,14 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0,0,0,0.55);
+                background: rgba(0, 0, 0, 0.55);
                 backdrop-filter: blur(6px);
                 -webkit-backdrop-filter: blur(6px);
                 z-index: 9997;
                 opacity: 0;
                 transition: opacity 0.3s ease;
             }
+
             #chat-overlay.visible {
                 display: block;
                 opacity: 1;
@@ -409,18 +666,22 @@
                 transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
                 z-index: 9999 !important;
             }
+
             #chat-window.visible {
                 transform: translateY(0);
                 pointer-events: all !important;
             }
+
             /* Disable transition while finger is dragging */
             #chat-window.sheet-dragging {
                 transition: none !important;
             }
+
             /* Top red accent line becomes rounded on top only */
             #chat-window::before {
                 border-radius: 24px 24px 0 0;
             }
+
             /* Pill handle above header – bigger and more visible */
             #chat-drag-handle {
                 display: flex;
@@ -430,27 +691,113 @@
                 cursor: grab;
                 flex-shrink: 0;
                 touch-action: none;
-                background: rgba(255,255,255,0.03);
+                background: rgba(255, 255, 255, 0.03);
                 user-select: none;
                 -webkit-user-select: none;
             }
-            #chat-drag-handle:active { cursor: grabbing; }
+
+            #chat-drag-handle:active {
+                cursor: grabbing;
+            }
+
             #chat-drag-handle span {
                 width: 48px;
                 height: 5px;
                 border-radius: 99px;
-                background: rgba(255,255,255,0.30);
+                background: rgba(255, 255, 255, 0.30);
                 transition: background 0.2s, width 0.2s;
             }
+
             #chat-drag-handle:active span {
-                background: var(--title-color, rgba(229,9,20,0.8));
+                background: var(--title-color, rgba(229, 9, 20, 0.8));
                 width: 56px;
             }
         }
+
         /* Hide the pill on desktop */
         @media (min-width: 769px) {
-            #chat-drag-handle { display: none; }
-            #chat-overlay     { display: none !important; }
+            #chat-drag-handle {
+                display: none;
+            }
+
+            #chat-overlay {
+                display: none !important;
+            }
+        }
+
+        /* ── Movie Chat Tabs ─────────────────────────────────────── */
+        .chat-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.18);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+            flex-shrink: 0;
+        }
+
+        .chat-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chat-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 5px 10px 5px 12px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.74rem;
+            cursor: pointer;
+            transition: all 0.20s ease;
+            max-width: 120px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .chat-tab:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .chat-tab.active {
+            background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.15));
+            border-color: var(--title-glow-dim, rgba(229, 9, 20, 0.45));
+            color: var(--title-color, #ff6b6b);
+            font-weight: 600;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-tab-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .chat-tab-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.58rem;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            margin-left: 2px;
+        }
+
+        .chat-tab-close:hover {
+            background: rgba(239, 68, 68, 0.35);
+            color: #ff8e8e;
         }
     </style>
     <link rel="icon" type="image/png" href="/Icons/movie roll.png" sizes="32x32">
@@ -500,7 +847,11 @@
                 </button>
                 <div class="settings-menu" id="backdrop-settings-menu">
                     <button class="settings-close-btn" id="settings-close-btn" aria-label="Close Settings">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                     <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Source</h4>
                     <div class="segmented-control" style="margin-bottom: 16px;">
@@ -519,7 +870,8 @@
                         <!-- Loaded via JS -->
                     </div>
 
-                    <div id="backdrop-order-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px; display: none;">
+                    <div id="backdrop-order-section"
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px; display: none;">
                         <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Backdrop Order</h4>
                         <div class="segmented-control">
                             <label class="control-item">
@@ -533,32 +885,41 @@
                         </div>
                     </div>
 
-                    <div id="backdrop-speed-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px;">
+                    <div id="backdrop-speed-section"
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px;">
                         <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #fff;">Transition Speed</h4>
                         <div class="segmented-control">
                             <label class="control-item">
-                                <input type="radio" name="bg-speed" value="2000">
-                                <span>2s</span>
+                                <input type="radio" name="bg-speed" value="15000">
+                                <span>15s</span>
                             </label>
                             <label class="control-item">
-                                <input type="radio" name="bg-speed" value="6000" checked>
-                                <span>6s</span>
+                                <input type="radio" name="bg-speed" value="30000" checked>
+                                <span>30s</span>
                             </label>
                             <label class="control-item">
-                                <input type="radio" name="bg-speed" value="10000">
-                                <span>10s</span>
+                                <input type="radio" name="bg-speed" value="45000">
+                                <span>45s</span>
                             </label>
                         </div>
                     </div>
 
-                    <div id="download-backdrop-section" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px;">
+                    <div id="download-backdrop-section"
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-bottom: 16px;">
                         <button id="download-backdrop-btn" class="settings-action-btn" type="button">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
                             <span>Download Current Backdrop</span>
                         </button>
                     </div>
 
-                    <div id="settings-favorites-search" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                    <div id="settings-favorites-search"
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
                         <input type="text" id="settings-mini-search" placeholder="Search to add favorites..."
                             style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; font-size: 0.9rem;">
                         <div id="settings-mini-results"
@@ -679,16 +1040,16 @@
         <!-- Chat FAB (draggable) -->
         <button id="chat-fab" title="Ask CineBot" aria-label="Open movie chatbot">
             <!-- Chat icon (default) -->
-            <svg id="chat-icon-open" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <svg id="chat-icon-open" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <!-- Close icon (when open) -->
-            <svg id="chat-icon-close" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+            <svg id="chat-icon-close" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
                 style="display:none">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
         </button>
 
@@ -707,30 +1068,39 @@
                 </div>
                 <span class="chat-movie-tag" id="chat-movie-tag">General</span>
                 <button id="chat-expand-btn" aria-label="Expand chat" title="Expand / Contract">
-                    <svg id="chat-icon-expand" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                    <svg id="chat-icon-expand" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                     </svg>
                 </button>
                 <button id="chat-close-btn" aria-label="Close chat" title="Close">✕</button>
             </div>
 
 
+            <!-- Movie Chat Tabs -->
+            <div id="chat-tabs" class="chat-tabs"></div>
+
             <div id="chat-messages">
                 <div class="chat-separator">Today</div>
                 <div class="chat-msg bot">
-                    Hi! I'm <strong>CineBot</strong> 🎬<br>Ask me anything about the current movie — plot, cast, post-credits scenes, trivia, and more!
+                    Hi! I'm <strong>CineBot</strong> 🎬<br>Ask me anything about the current movie — plot, cast,
+                    post-credits scenes, trivia, and more!
                 </div>
+            </div>
+            <div class="chat-quick-actions" id="chat-quick-actions">
+                <button class="chat-quick-action-btn" id="chat-quiz-btn">🎬 Help me choose a movie</button>
             </div>
 
             <div id="chat-input-area">
-                <textarea id="chat-input" rows="1" placeholder="Ask about the movie..." aria-label="Chat message"></textarea>
+                <textarea id="chat-input" rows="1" placeholder="Ask about the movie..."
+                    aria-label="Chat message"></textarea>
                 <button id="chat-clear-btn" title="Clear chat">Clear</button>
                 <button id="chat-send-btn" aria-label="Send message" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"/>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
                 </button>
             </div>
@@ -743,7 +1113,7 @@
             <button class="roulette-close-btn" id="roulette-close-btn" aria-label="Close Roulette">&times;</button>
             <h2 class="roulette-modal-title">CINE-ROULETTE</h2>
             <p class="roulette-modal-subtitle">Can't decide what to watch? Let the movie gods choose!</p>
-            
+
             <div class="roulette-genre-selector">
                 <span class="genre-selector-label">Filter by Genre:</span>
                 <select id="roulette-genre-select" class="roulette-select">
@@ -768,16 +1138,16 @@
                     <option value="37">Western</option>
                 </select>
             </div>
-            
+
             <div class="roulette-wheel-container">
                 <div class="roulette-pointer"></div>
                 <div class="roulette-track" id="roulette-track">
                     <!-- Posters spinning horizontally -->
                 </div>
             </div>
-            
+
             <button class="roulette-spin-btn" id="roulette-spin-btn">SPIN THE WHEEL</button>
-            
+
             <!-- Winner details card -->
             <div id="roulette-winner-card" class="roulette-winner-card">
                 <!-- Winner poster and details render dynamically -->
@@ -800,398 +1170,803 @@
     <div id="media-lightbox" class="media-lightbox">
         <div class="lightbox-content">
             <button class="lightbox-close" id="lightbox-close">&times;</button>
-            <div id="lightbox-body"></div>
+            <div class="lightbox-content-split">
+                <div id="lightbox-body"></div>
+                <div id="lightbox-details" class="lightbox-details"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Trivia Modal -->
+    <div id="trivia-modal" class="trivia-modal">
+        <div class="trivia-modal-content">
+            <button class="trivia-close-btn" id="trivia-close-btn" aria-label="Close Trivia">&times;</button>
+            <div class="trivia-header">
+                <h3>🏆 CINE-TRIVIA</h3>
+                <div class="trivia-score-badge">Créditos: <span id="trivia-credits-value">0</span></div>
+            </div>
+            <div class="trivia-tabs">
+                <button class="trivia-tab-btn active" id="trivia-tab-quiz">📝 Jugar</button>
+                <button class="trivia-tab-btn" id="trivia-tab-store">🎨 Tienda de Temas</button>
+            </div>
+            <div class="trivia-body" id="trivia-body">
+                <!-- Dynamic Content -->
+            </div>
         </div>
     </div>
 
     <script src="/Scripts/Main.js" defer></script>
     <script>
-    (function () {
-        /* ── Elements ───────────────────────────────────────────── */
-        const fab         = document.getElementById('chat-fab');
-        const chatWin     = document.getElementById('chat-window');
-        const input       = document.getElementById('chat-input');
-        const sendBtn     = document.getElementById('chat-send-btn');
-        const clearBtn    = document.getElementById('chat-clear-btn');
-        const closeBtn    = document.getElementById('chat-close-btn');
-        const messages    = document.getElementById('chat-messages');
-        const movieTag    = document.getElementById('chat-movie-tag');
-        const iconOpen    = document.getElementById('chat-icon-open');
-        const iconClose   = document.getElementById('chat-icon-close');
-
-        const FAB_SIZE  = 72;
-        const PEEK      = FAB_SIZE / 2;   // how much stays visible when hidden
-        const SNAP_MS   = 320;            // snap animation duration
-
-        /* ── State ──────────────────────────────────────────────── */
-        let isOpen     = false;
-        let isDragging = false;
-        let dragOffX   = 0, dragOffY = 0;
-        let fabX       = window.innerWidth - FAB_SIZE - 8;
-        let fabY       = window.innerHeight - 144;
-        let snappedSide = 'right';   // 'left' | 'right'
-        let isRevealed  = false;
-
-        /* ── CSS transition helper ──────────────────────────────── */
-        function setTransition(on) {
-            fab.style.transition = on
-                ? `left ${SNAP_MS}ms cubic-bezier(0.34,1.56,0.64,1), top ${SNAP_MS}ms cubic-bezier(0.34,1.56,0.64,1)`
-                : 'none';
-        }
-
-        /* ── Place FAB (raw pixel pos, no snap) ─────────────────── */
-        function applyFabPos(x, y, clamp = true) {
-            const W = window.innerWidth, H = window.innerHeight;
-            if (clamp) {
-                x = Math.max(8, Math.min(W - FAB_SIZE - 8, x));
-                y = Math.max(8, Math.min(H - FAB_SIZE - 8, y));
-            }
-            fab.style.left   = x + 'px';
-            fab.style.top    = y + 'px';
-            fab.style.right  = 'unset';
-            fab.style.bottom = 'unset';
-            fabX = x; fabY = y;
-        }
-
-        /* ── Snap to nearest side ───────────────────────────────── */
-        function snapToSide(animate = true) {
-            const W = window.innerWidth;
-            const mid = fabX + FAB_SIZE / 2;
-            snappedSide = mid < W / 2 ? 'left' : 'right';
-
-            const snappedX = snappedSide === 'left'
-                ? -PEEK              // left: hide right half
-                : W - FAB_SIZE + PEEK; // right: hide left half
-
-            setTransition(animate);
-            applyFabPos(snappedX, fabY, false);
-            fab.classList.add('snapped', 'snapped-' + snappedSide);
-            fab.classList.remove('snapped-' + (snappedSide === 'left' ? 'right' : 'left'));
-            isRevealed = false;
-
-            if (animate) setTimeout(() => setTransition(false), SNAP_MS);
-        }
-
-        /* ── Reveal FAB fully (on hover / when open) ────────────── */
-        function revealFab(animate = true) {
-            if (isRevealed) return;
-            isRevealed = true;
-            const W = window.innerWidth;
-            const revealedX = snappedSide === 'left' ? 8 : W - FAB_SIZE - 8;
-            setTransition(animate);
-            applyFabPos(revealedX, fabY, false);
-            if (animate) setTimeout(() => setTransition(false), SNAP_MS);
-        }
-
-        /* ── Mobile detection helper ─────────────────────────────── */
-        function isMobile() { return window.innerWidth <= 768; }
-
-        /* ── Hide back to snapped position ─────────────────────── */
-        function hideFab(animate = true) {
-            if (!isRevealed || isOpen) return;
-            isRevealed = false;
-            snapToSide(animate);
-        }
-
-        /* ── Hover events ───────────────────────────────────────── */
-        fab.addEventListener('mouseenter', () => revealFab());
-        fab.addEventListener('mouseleave', () => hideFab());
-
-        /* ── Initial placement ──────────────────────────────────── */
-        applyFabPos(fabX, fabY);
-        // Snap after a short delay so the transition doesn't fire on load
-        setTimeout(() => snapToSide(true), 100);
-
-        /* ── Position chat window relative to FAB ───────────────── */
-        function positionWindow() {
-            if (isMobile()) return; // Mobile uses CSS bottom-sheet, no JS positioning
-            const W   = window.innerWidth, H = window.innerHeight;
-            
-            const baseW = isExpanded ? 540 : 370;
-            const baseH = isExpanded ? 680 : 520;
-
-            const WW  = Math.min(baseW, W - 24);
-            const WH  = Math.min(baseH, H - 100);
-            const PAD = 12;
-
-            // Open window on the visible side
-            let left = snappedSide === 'right'
-                ? fabX - WW - PAD
-                : fabX + FAB_SIZE + PAD;
-
-            let top = fabY + FAB_SIZE / 2 - WH / 2;
-
-            // Clamp to viewport
-            if (left < PAD)          left = PAD;
-            if (left + WW > W - PAD) left = W - WW - PAD;
-            if (top < PAD)           top  = PAD;
-            if (top + WH > H - PAD)  top  = H - WH - PAD;
-
-            chatWin.style.left   = left + 'px';
-            chatWin.style.top    = top  + 'px';
-            chatWin.style.right  = 'unset';
-            chatWin.style.bottom = 'unset';
-            chatWin.style.width  = WW + 'px';
-            chatWin.style.height = WH + 'px';
-        }
-
-        /* ── Drag (mouse) ────────────────────────────────────────── */
-        fab.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            isDragging = false;
-            // Unsnap immediately so dragging feels direct
-            revealFab(false);
-            dragOffX = e.clientX - fabX;
-            dragOffY = e.clientY - fabY;
-
-            function onMove(e) {
-                if (!isDragging && (Math.abs(e.clientX - dragOffX - fabX) > 4 || Math.abs(e.clientY - dragOffY - fabY) > 4)) {
-                    isDragging = true;
-                    fab.classList.add('dragging');
-                    fab.classList.remove('snapped', 'snapped-left', 'snapped-right');
-                }
-                if (isDragging) {
-                    setTransition(false);
-                    applyFabPos(e.clientX - dragOffX, e.clientY - dragOffY);
-                    if (isOpen) positionWindow();
-                }
-            }
-            function onUp() {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-                fab.classList.remove('dragging');
-                if (isDragging) {
-                    snapToSide(true);
-                    // Immediately reveal after snap if mouse still over
-                    setTimeout(() => revealFab(true), SNAP_MS + 50);
-                } else {
-                    toggleChat();
-                }
-                isDragging = false;
-            }
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-            e.preventDefault();
-        });
-
-        /* ── Drag (touch) ────────────────────────────────────────── */
-        fab.addEventListener('touchstart', (e) => {
-            const t = e.touches[0];
-            isDragging = false;
-            revealFab(false);
-            dragOffX = t.clientX - fabX;
-            dragOffY = t.clientY - fabY;
-            // Prevent page scroll from stealing the drag
-            e.preventDefault();
-
-            function onMove(e) {
-                const t = e.touches[0];
-                if (!isDragging && (Math.abs(t.clientX - dragOffX - fabX) > 6 || Math.abs(t.clientY - dragOffY - fabY) > 6)) {
-                    isDragging = true;
-                    fab.classList.add('dragging');
-                    fab.classList.remove('snapped', 'snapped-left', 'snapped-right');
-                }
-                if (isDragging) {
-                    setTransition(false);
-                    applyFabPos(t.clientX - dragOffX, t.clientY - dragOffY);
-                    if (isOpen) positionWindow();
-                }
-                e.preventDefault();
-            }
-            function onEnd(e) {
-                document.removeEventListener('touchmove', onMove);
-                document.removeEventListener('touchend', onEnd);
-                fab.classList.remove('dragging');
-                if (isDragging) {
-                    snapToSide(true);
-                } else {
-                    toggleChat();
-                }
-                isDragging = false;
-            }
-            document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('touchend', onEnd, { passive: false });
-        }, { passive: false });
-
-        /* ── Toggle open/close ───────────────────────────────────── */
-        const overlay = document.getElementById('chat-overlay');
-
-        function toggleChat(force) {
-            isOpen = (force !== undefined) ? force : !isOpen;
-            fab.classList.toggle('open', isOpen);
-            iconOpen.style.display  = isOpen ? 'none' : '';
-            iconClose.style.display = isOpen ? ''     : 'none';
-            chatWin.classList.toggle('visible', isOpen);
-            chatWin.setAttribute('aria-hidden', String(!isOpen));
-
-            if (isMobile() && overlay) {
-                if (isOpen) {
-                    overlay.style.display = 'block';
-                    requestAnimationFrame(() => overlay.classList.add('visible'));
-                    // Lock body scroll so the page behind doesn't scroll
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    overlay.classList.remove('visible');
-                    setTimeout(() => { overlay.style.display = 'none'; }, 300);
-                    document.body.style.overflow = '';
-                }
+        (function () {
+            // Load and apply custom neon theme on page load
+            const savedTheme = localStorage.getItem('active_theme') || 'default';
+            if (savedTheme !== 'default') {
+                document.documentElement.className = `theme-${savedTheme}`;
             }
 
-            if (isOpen) {
-                revealFab(true);
-                positionWindow();
-                movieTag.textContent = getCurrentMovie();
-                setTimeout(() => input.focus(), 380);
-            } else {
-                // Clean up drag-induced inline styles after transitions finish (400ms)
-                setTimeout(() => {
-                    if (!isOpen) {
-                        chatWin.style.transform = '';
-                        if (overlay) overlay.style.opacity = '';
+            /* ── Elements ───────────────────────────────────────────── */
+            const fab = document.getElementById('chat-fab');
+            const chatWin = document.getElementById('chat-window');
+            const input = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('chat-send-btn');
+            const clearBtn = document.getElementById('chat-clear-btn');
+            const closeBtn = document.getElementById('chat-close-btn');
+            const messages = document.getElementById('chat-messages');
+            const movieTag = document.getElementById('chat-movie-tag');
+            const iconOpen = document.getElementById('chat-icon-open');
+            const iconClose = document.getElementById('chat-icon-close');
+            const quizBtn = document.getElementById('chat-quiz-btn');
+            const quickActions = document.getElementById('chat-quick-actions');
+
+            const FAB_SIZE = 72;
+            const PEEK = FAB_SIZE / 2;   // how much stays visible when hidden
+            const SNAP_MS = 320;            // snap animation duration
+
+            /* ── State ──────────────────────────────────────────────── */
+            let isOpen = false;
+            let isDragging = false;
+            let dragOffX = 0, dragOffY = 0;
+            let fabX = window.innerWidth - FAB_SIZE - 8;
+            let fabY = window.innerHeight - 144;
+            let snappedSide = 'right';   // 'left' | 'right'
+            let isRevealed = false;
+
+            // Movie Chat History and Tabs state
+            const STORAGE_KEY = 'cinebot_chats_v1';
+            let movieChats = {};
+            let activeMovie = 'General';
+            let lastSyncedMovie = '';
+
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    movieChats = JSON.parse(stored);
+                    // Migrate old HTML tags in greeting/history to markdown
+                    let migrated = false;
+                    Object.keys(movieChats).forEach(key => {
+                        if (Array.isArray(movieChats[key])) {
+                            movieChats[key] = movieChats[key].map(msg => {
+                                if (msg && msg.content && (msg.role === 'assistant' || msg.type === 'bot')) {
+                                    let content = msg.content;
+                                    if (content.includes('<strong>') || content.includes('<br>')) {
+                                        content = content
+                                            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+                                            .replace(/<br\s*\/?>/g, '\n');
+                                        migrated = true;
+                                        return { ...msg, content };
+                                    }
+                                }
+                                return msg;
+                            });
+                        }
+                    });
+                    if (migrated) {
+                        try {
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(movieChats));
+                        } catch (err) {
+                            console.error('Failed to save migrated chats', err);
+                        }
                     }
-                }, 400);
-                setTimeout(() => hideFab(true), 300);
+                }
+            } catch (e) {
+                console.error('Failed to load chat history', e);
             }
-        }
 
-        /* Overlay click closes sheet on mobile */
-        if (overlay) overlay.addEventListener('click', () => toggleChat(false));
+            /* ── CSS transition helper ──────────────────────────────── */
+            function setTransition(on) {
+                fab.style.transition = on
+                    ? `left ${SNAP_MS}ms cubic-bezier(0.34,1.56,0.64,1), top ${SNAP_MS}ms cubic-bezier(0.34,1.56,0.64,1)`
+                    : 'none';
+            }
 
-        /* ── Swipe-down to close (mobile drag handle) ────────────── */
-        const dragHandle = document.getElementById('chat-drag-handle');
-        if (dragHandle) {
-            dragHandle.addEventListener('touchstart', (e) => {
-                if (!isOpen) return;
-                const startY = e.touches[0].clientY;
-                let currentY = startY;
+            /* ── Place FAB (raw pixel pos, no snap) ─────────────────── */
+            function applyFabPos(x, y, clamp = true) {
+                const W = window.innerWidth, H = window.innerHeight;
+                if (clamp) {
+                    x = Math.max(8, Math.min(W - FAB_SIZE - 8, x));
+                    y = Math.max(8, Math.min(H - FAB_SIZE - 8, y));
+                }
+                fab.style.left = x + 'px';
+                fab.style.top = y + 'px';
+                fab.style.right = 'unset';
+                fab.style.bottom = 'unset';
+                fabX = x; fabY = y;
+            }
 
-                // Disable CSS transition while dragging
-                chatWin.classList.add('sheet-dragging');
+            /* ── Snap to nearest side ───────────────────────────────── */
+            function snapToSide(animate = true) {
+                const W = window.innerWidth;
+                const mid = fabX + FAB_SIZE / 2;
+                snappedSide = mid < W / 2 ? 'left' : 'right';
+
+                const snappedX = snappedSide === 'left'
+                    ? -PEEK              // left: hide right half
+                    : W - FAB_SIZE + PEEK; // right: hide left half
+
+                setTransition(animate);
+                applyFabPos(snappedX, fabY, false);
+                fab.classList.add('snapped', 'snapped-' + snappedSide);
+                fab.classList.remove('snapped-' + (snappedSide === 'left' ? 'right' : 'left'));
+                isRevealed = false;
+
+                if (animate) setTimeout(() => setTransition(false), SNAP_MS);
+            }
+
+            /* ── Reveal FAB fully (on hover / when open) ────────────── */
+            function revealFab(animate = true) {
+                if (isRevealed) return;
+                isRevealed = true;
+                const W = window.innerWidth;
+                const revealedX = snappedSide === 'left' ? 8 : W - FAB_SIZE - 8;
+                setTransition(animate);
+                applyFabPos(revealedX, fabY, false);
+                if (animate) setTimeout(() => setTransition(false), SNAP_MS);
+            }
+
+            /* ── Mobile detection helper ─────────────────────────────── */
+            function isMobile() { return window.innerWidth <= 768; }
+
+            /* ── Hide back to snapped position ─────────────────────── */
+            function hideFab(animate = true) {
+                if (!isRevealed || isOpen) return;
+                isRevealed = false;
+                snapToSide(animate);
+            }
+
+            /* ── Hover events ───────────────────────────────────────── */
+            fab.addEventListener('mouseenter', () => revealFab());
+            fab.addEventListener('mouseleave', () => hideFab());
+
+            /* ── Initial placement ──────────────────────────────────── */
+            applyFabPos(fabX, fabY);
+            // Snap after a short delay so the transition doesn't fire on load
+            setTimeout(() => snapToSide(true), 100);
+
+            /* ── Position chat window relative to FAB ───────────────── */
+            function positionWindow() {
+                if (isMobile()) return; // Mobile uses CSS bottom-sheet, no JS positioning
+                const W = window.innerWidth, H = window.innerHeight;
+
+                const baseW = isExpanded ? 540 : 370;
+                const baseH = isExpanded ? 680 : 520;
+
+                const WW = Math.min(baseW, W - 24);
+                const WH = Math.min(baseH, H - 100);
+                const PAD = 12;
+
+                // Open window on the visible side
+                let left = snappedSide === 'right'
+                    ? fabX - WW - PAD
+                    : fabX + FAB_SIZE + PAD;
+
+                let top = fabY + FAB_SIZE / 2 - WH / 2;
+
+                // Clamp to viewport
+                if (left < PAD) left = PAD;
+                if (left + WW > W - PAD) left = W - WW - PAD;
+                if (top < PAD) top = PAD;
+                if (top + WH > H - PAD) top = H - WH - PAD;
+
+                chatWin.style.left = left + 'px';
+                chatWin.style.top = top + 'px';
+                chatWin.style.right = 'unset';
+                chatWin.style.bottom = 'unset';
+                chatWin.style.width = WW + 'px';
+                chatWin.style.height = WH + 'px';
+            }
+
+            /* ── Drag (mouse) ────────────────────────────────────────── */
+            fab.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                isDragging = false;
+                // Unsnap immediately so dragging feels direct
+                revealFab(false);
+                dragOffX = e.clientX - fabX;
+                dragOffY = e.clientY - fabY;
 
                 function onMove(e) {
-                    currentY = e.touches[0].clientY;
-                    const dy = Math.max(0, currentY - startY);
-                    chatWin.style.transform = `translateY(${dy}px)`;
-                    if (overlay) overlay.style.opacity = String(Math.max(0, 1 - dy / 300));
+                    if (!isDragging && (Math.abs(e.clientX - dragOffX - fabX) > 4 || Math.abs(e.clientY - dragOffY - fabY) > 4)) {
+                        isDragging = true;
+                        fab.classList.add('dragging');
+                        fab.classList.remove('snapped', 'snapped-left', 'snapped-right');
+                    }
+                    if (isDragging) {
+                        setTransition(false);
+                        applyFabPos(e.clientX - dragOffX, e.clientY - dragOffY);
+                        if (isOpen) positionWindow();
+                    }
+                }
+                function onUp() {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    fab.classList.remove('dragging');
+                    if (isDragging) {
+                        snapToSide(true);
+                        // Immediately reveal after snap if mouse still over
+                        setTimeout(() => revealFab(true), SNAP_MS + 50);
+                    } else {
+                        toggleChat();
+                    }
+                    isDragging = false;
+                }
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+                e.preventDefault();
+            });
+
+            /* ── Drag (touch) ────────────────────────────────────────── */
+            fab.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                isDragging = false;
+                revealFab(false);
+                dragOffX = t.clientX - fabX;
+                dragOffY = t.clientY - fabY;
+                // Prevent page scroll from stealing the drag
+                e.preventDefault();
+
+                function onMove(e) {
+                    const t = e.touches[0];
+                    if (!isDragging && (Math.abs(t.clientX - dragOffX - fabX) > 6 || Math.abs(t.clientY - dragOffY - fabY) > 6)) {
+                        isDragging = true;
+                        fab.classList.add('dragging');
+                        fab.classList.remove('snapped', 'snapped-left', 'snapped-right');
+                    }
+                    if (isDragging) {
+                        setTransition(false);
+                        applyFabPos(t.clientX - dragOffX, t.clientY - dragOffY);
+                        if (isOpen) positionWindow();
+                    }
                     e.preventDefault();
                 }
-
-                function onEnd() {
+                function onEnd(e) {
                     document.removeEventListener('touchmove', onMove);
                     document.removeEventListener('touchend', onEnd);
-
-                    const dy = currentY - startY;
-                    chatWin.classList.remove('sheet-dragging'); // restore transition
-
-                    if (dy > 120) {
-                        // Animate sheet out, then call toggleChat to clean up state
-                        chatWin.style.transform = 'translateY(100%)';
-                        if (overlay) overlay.style.opacity = '0';
-                        setTimeout(() => toggleChat(false), 380);
+                    fab.classList.remove('dragging');
+                    if (isDragging) {
+                        snapToSide(true);
                     } else {
-                        // Snap back
-                        chatWin.style.transform = '';
-                        if (overlay) overlay.style.opacity = '1';
+                        toggleChat();
+                    }
+                    isDragging = false;
+                }
+                document.addEventListener('touchmove', onMove, { passive: false });
+                document.addEventListener('touchend', onEnd, { passive: false });
+            }, { passive: false });
+
+            /* ── Toggle open/close ───────────────────────────────────── */
+            const overlay = document.getElementById('chat-overlay');
+
+            function toggleChat(force) {
+                isOpen = (force !== undefined) ? force : !isOpen;
+                fab.classList.toggle('open', isOpen);
+                iconOpen.style.display = isOpen ? 'none' : '';
+                iconClose.style.display = isOpen ? '' : 'none';
+                chatWin.classList.toggle('visible', isOpen);
+                chatWin.setAttribute('aria-hidden', String(!isOpen));
+
+                if (isMobile() && overlay) {
+                    if (isOpen) {
+                        overlay.style.display = 'block';
+                        requestAnimationFrame(() => overlay.classList.add('visible'));
+                        // Lock body scroll so the page behind doesn't scroll
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        overlay.classList.remove('visible');
+                        setTimeout(() => { overlay.style.display = 'none'; }, 300);
+                        document.body.style.overflow = '';
                     }
                 }
 
-                document.addEventListener('touchmove', onMove, { passive: false });
-                document.addEventListener('touchend', onEnd, { passive: true });
-                e.preventDefault();
-            }, { passive: false });
-        }
-
-        /* ── Expand chat desktop logic ─────────────────────────── */
-        let isExpanded = false;
-        const expandBtn = document.getElementById('chat-expand-btn');
-        if (expandBtn) {
-            expandBtn.addEventListener('click', () => {
-                isExpanded = !isExpanded;
-                chatWin.classList.toggle('expanded', isExpanded);
-                
-                const expandSvg = expandBtn.querySelector('svg');
-                if (isExpanded) {
-                    // Collapse icon
-                    expandSvg.innerHTML = '<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>';
+                if (isOpen) {
+                    revealFab(true);
+                    positionWindow();
+                    const cur = getCurrentMovie();
+                    initMovieChat(cur);
+                    switchMovieTab(cur);
+                    setTimeout(() => input.focus(), 380);
                 } else {
-                    // Expand icon
-                    expandSvg.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+                    // Clean up drag-induced inline styles after transitions finish (400ms)
+                    setTimeout(() => {
+                        if (!isOpen) {
+                            chatWin.style.transform = '';
+                            if (overlay) overlay.style.opacity = '';
+                        }
+                    }, 400);
+                    setTimeout(() => hideFab(true), 300);
                 }
-                positionWindow();
-            });
-        }
-
-        closeBtn.addEventListener('click', () => toggleChat(false));
-
-        /* ── Helpers ────────────────────────────────────────────── */
-        function getCurrentMovie() {
-            const el = document.getElementById('backdrop-title');
-            return (el && el.textContent.trim()) || 'General';
-        }
-
-        function scrollToBottom() {
-            messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
-        }
-
-        /* Markdown basic parser for bot messages */
-        function formatMarkdown(text) {
-            // Escapes HTML tags to prevent XSS issues
-            let escaped = text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-
-            // Bold **text** -> <strong>text</strong>
-            escaped = escaped.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-            // Bullet lists -> Styled items
-            escaped = escaped.replace(/^(?:\*|-)\s+(.+)$/gm, "<div class='chat-list-item'>• $1</div>");
-
-            // Line breaks
-            escaped = escaped.split("\n").join("<br>");
-
-            // Remove excessive br tags next to lists for layout cleaning
-            escaped = escaped.replace(/(?:<div class='chat-list-item'>.*?<\/div>)<br>/g, (match) => {
-                return match.slice(0, -4);
-            });
-
-            return escaped;
-        }
-
-        function addMessage(text, role) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg ' + role;
-            if (role === 'bot') {
-                div.innerHTML = formatMarkdown(text);
-            } else {
-                div.textContent = text;
             }
-            messages.appendChild(div);
-            scrollToBottom();
-            return div;
-        }
 
-        function addTyping() {
-            const div = document.createElement('div');
-            div.className = 'chat-msg typing';
-            div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-            messages.appendChild(div);
-            scrollToBottom();
-            return div;
-        }
+            /* Overlay click closes sheet on mobile */
+            if (overlay) overlay.addEventListener('click', () => toggleChat(false));
 
-        /* ── Clear chat ─────────────────────────────────────────── */
-        clearBtn.addEventListener('click', () => {
-            messages.innerHTML = '';
-            const sep = document.createElement('div');
-            sep.className = 'chat-separator'; sep.textContent = 'Today';
-            const greet = document.createElement('div');
-            greet.className = 'chat-msg bot';
-            greet.innerHTML = 'Hi! I\'m <strong>CineBot</strong> 🎬<br>Ask me anything about the current movie!';
-            messages.append(sep, greet);
-        });
+            /* ── Swipe-down to close (mobile drag handle) ────────────── */
+            const dragHandle = document.getElementById('chat-drag-handle');
+            if (dragHandle) {
+                dragHandle.addEventListener('touchstart', (e) => {
+                    if (!isOpen) return;
+                    const startY = e.touches[0].clientY;
+                    let currentY = startY;
+
+                    // Disable CSS transition while dragging
+                    chatWin.classList.add('sheet-dragging');
+
+                    function onMove(e) {
+                        currentY = e.touches[0].clientY;
+                        const dy = Math.max(0, currentY - startY);
+                        chatWin.style.transform = `translateY(${dy}px)`;
+                        if (overlay) overlay.style.opacity = String(Math.max(0, 1 - dy / 300));
+                        e.preventDefault();
+                    }
+
+                    function onEnd() {
+                        document.removeEventListener('touchmove', onMove);
+                        document.removeEventListener('touchend', onEnd);
+
+                        const dy = currentY - startY;
+                        chatWin.classList.remove('sheet-dragging'); // restore transition
+
+                        if (dy > 120) {
+                            // Animate sheet out, then call toggleChat to clean up state
+                            chatWin.style.transform = 'translateY(100%)';
+                            if (overlay) overlay.style.opacity = '0';
+                            setTimeout(() => toggleChat(false), 380);
+                        } else {
+                            // Snap back
+                            chatWin.style.transform = '';
+                            if (overlay) overlay.style.opacity = '1';
+                        }
+                    }
+
+                    document.addEventListener('touchmove', onMove, { passive: false });
+                    document.addEventListener('touchend', onEnd, { passive: true });
+                    e.preventDefault();
+                }, { passive: false });
+            }
+
+            /* ── Expand chat desktop logic ─────────────────────────── */
+            let isExpanded = false;
+            const expandBtn = document.getElementById('chat-expand-btn');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', () => {
+                    isExpanded = !isExpanded;
+                    chatWin.classList.toggle('expanded', isExpanded);
+                    
+                    const expandSvg = expandBtn.querySelector('svg');
+                    if (isExpanded) {
+                        // Collapse icon
+                        expandSvg.innerHTML = '<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>';
+                    } else {
+                        // Expand icon
+                        expandSvg.innerHTML = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';
+                    }
+                    positionWindow();
+                });
+            }
+
+            closeBtn.addEventListener('click', () => toggleChat(false));
+
+            /* ── Helpers ────────────────────────────────────────────── */
+            function getCurrentMovie() {
+                const el = document.getElementById('backdrop-title');
+                return (el && el.textContent.trim()) || 'General';
+            }
+
+            function scrollToBottom() {
+                messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
+            }
+
+            /* Markdown basic parser for bot messages */
+            function formatMarkdown(text) {
+                // Strip carriage returns first to avoid regex issues on line ends
+                let escaped = String(text).replace(/\r/g, "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+
+                // Headers: ### title -> <h3>title</h3>
+                escaped = escaped.replace(/^###\s+(.+)$/gm, "<h3>$1</h3>");
+                escaped = escaped.replace(/^##\s+(.+)$/gm, "<h2>$1</h2>");
+                escaped = escaped.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
+
+                // Bold **text** -> <strong>text</strong>
+                escaped = escaped.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+                // Italics *text* or _text_ -> <em>text</em>
+                escaped = escaped.replace(/\*(.*?)\*/g, "<em>$1</em>");
+                escaped = escaped.replace(/_(.*?)_/g, "<em>$1</em>");
+
+                // Bullet lists -> Styled items
+                escaped = escaped.replace(/^\s*(?:\*|-)\s+(.+)$/gm, "<div class='chat-list-item'>• $1</div>");
+
+                // Line breaks
+                escaped = escaped.split("\n").join("<br>");
+
+                // Remove excessive br tags next to lists and headers for layout cleaning
+                escaped = escaped.replace(/(?:<div class='chat-list-item'>.*?<\/div>)<br>/g, (match) => {
+                    return match.slice(0, -4);
+                });
+                escaped = escaped.replace(/(?:<h[1-3]>.*?<\/h[1-3]>)<br>/g, (match) => {
+                    return match.slice(0, -4);
+                });
+
+                return escaped;
+            }
+
+            /* ── Movie Chat History & Tabs logic ─────────────────────── */
+            const tabsContainer = document.getElementById('chat-tabs');
+
+            function saveChats() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(movieChats));
+                } catch (e) {
+                    console.error('Failed to save chat history', e);
+                }
+            }
+
+            function isChatInitiated(title) {
+                if (title === 'General') return true;
+                const chat = movieChats[title];
+                if (!chat) return false;
+                return chat.length > 2;
+            }
+
+            function initMovieChat(title) {
+                if (!movieChats[title]) {
+                    movieChats[title] = [
+                        { role: 'system', content: 'Today', type: 'separator' },
+                        { role: 'assistant', content: `Hi! I'm **CineBot** 🎬\nAsk me anything about **${title === 'General' ? 'movies' : title}** — plot, cast, post-credits scenes, trivia, and more!`, type: 'bot' }
+                    ];
+                    
+                    // Manage empty tabs limit: keep at most 3 empty movie tabs
+                    if (title !== 'General') {
+                        const emptyKeys = Object.keys(movieChats).filter(k => k !== 'General' && k !== title && !isChatInitiated(k));
+                        if (emptyKeys.length >= 3) {
+                            // Remove oldest empty chats
+                            const overflowCount = emptyKeys.length - 2;
+                            const toRemove = emptyKeys.slice(0, overflowCount);
+                            toRemove.forEach(k => {
+                                delete movieChats[k];
+                            });
+                        }
+                    }
+                    
+                    saveChats();
+                }
+            }
+
+            function renderTabs() {
+                if (!tabsContainer) return;
+                tabsContainer.innerHTML = '';
+
+                Object.keys(movieChats).forEach(title => {
+                    const tab = document.createElement('div');
+                    tab.className = 'chat-tab' + (title === activeMovie ? ' active' : '');
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'chat-tab-title';
+                    titleSpan.textContent = title;
+                    titleSpan.title = title;
+                    tab.appendChild(titleSpan);
+
+                    if (title !== 'General') {
+                        const closeTabBtn = document.createElement('span');
+                        closeTabBtn.className = 'chat-tab-close';
+                        closeTabBtn.textContent = '✕';
+                        closeTabBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            delete movieChats[title];
+                            saveChats();
+                            if (activeMovie === title) {
+                                const pageMovie = getCurrentMovie();
+                                const nextActive = movieChats[pageMovie] ? pageMovie : 'General';
+                                switchMovieTab(nextActive);
+                            } else {
+                                renderTabs();
+                            }
+                        });
+                        tab.appendChild(closeTabBtn);
+                    }
+
+                    tab.addEventListener('click', () => {
+                        switchMovieTab(title);
+                    });
+
+                    tabsContainer.appendChild(tab);
+                });
+
+                const activeTabEl = tabsContainer.querySelector('.chat-tab.active');
+                if (activeTabEl) {
+                    activeTabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                }
+            }
+
+            function renderMessage(msg) {
+                if (msg.type === 'separator' || msg.role === 'system') {
+                    const sep = document.createElement('div');
+                    sep.className = 'chat-separator';
+                    sep.textContent = msg.content;
+                    messages.appendChild(sep);
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'chat-msg ' + (msg.type || (msg.role === 'assistant' ? 'bot' : 'user'));
+                    if (msg.type === 'bot' || msg.role === 'assistant') {
+                        div.innerHTML = formatMarkdown(msg.content);
+                    } else {
+                        div.textContent = msg.content;
+                    }
+                    messages.appendChild(div);
+                }
+            }
+
+            function switchMovieTab(title) {
+                activeMovie = title;
+                renderTabs();
+                messages.innerHTML = '';
+                initMovieChat(activeMovie);
+                movieChats[activeMovie].forEach(renderMessage);
+                scrollToBottom();
+
+                movieTag.textContent = activeMovie;
+                const statusEl = document.querySelector('.chat-status');
+                if (statusEl) {
+                    statusEl.textContent = `Talking about: ${activeMovie}`;
+                }
+            }
+
+            function addMessage(text, role, saveToHistory = true) {
+                const div = document.createElement('div');
+                div.className = 'chat-msg ' + role;
+                if (role === 'bot') {
+                    div.innerHTML = formatMarkdown(text);
+                } else {
+                    div.textContent = text;
+                }
+                messages.appendChild(div);
+                scrollToBottom();
+
+                if (saveToHistory) {
+                    const histRole = (role === 'bot') ? 'assistant' : (role === 'error' ? 'system' : role);
+                    if (!movieChats[activeMovie]) {
+                        movieChats[activeMovie] = [];
+                    }
+                    movieChats[activeMovie].push({
+                        role: histRole,
+                        content: text,
+                        type: role
+                    });
+                    saveChats();
+                }
+                return div;
+            }
+
+            function addTyping() {
+                const div = document.createElement('div');
+                div.className = 'chat-msg typing';
+                div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+                messages.appendChild(div);
+                scrollToBottom();
+                return div;
+            }
+
+            /* ── Interactive Movie Recommendation Quiz ───────────────── */
+            function startQuizFlow() {
+                input.disabled = true;
+                input.placeholder = "Respondiendo el quiz...";
+                sendBtn.disabled = true;
+                if (quickActions) {
+                    quickActions.style.display = 'none';
+                }
+                
+                addMessage("¡Quiero que me recomiendes una película! 🎬", 'user');
+                
+                // Question 1: Mood
+                setTimeout(() => {
+                    addMessage("¡Excelente! ¿Qué tipo de ánimo tenés hoy?", 'bot');
+                    addQuizChoices([
+                        { label: "😂 Reír", value: "laugh" },
+                        { label: "😢 Llorar", value: "cry" },
+                        { label: "😱 Asustarme", value: "scared" },
+                        { label: "🤔 Pensar", value: "think" }
+                    ], (moodOpt) => {
+                        addMessage(`Quiero: ${moodOpt.label}`, 'user');
+                        
+                        // Question 2: Era
+                        setTimeout(() => {
+                            addMessage("Buena elección. ¿De qué época preferís la producción?", 'bot');
+                            addQuizChoices([
+                                { label: "🎞️ Clásica (Antes de los 80)", value: "classic" },
+                                { label: "📀 Nostálgica (80s-00s)", value: "nostalgic" },
+                                { label: "🎥 Moderna (Recientes)", value: "modern" }
+                            ], (eraOpt) => {
+                                addMessage(`Era: ${eraOpt.label}`, 'user');
+                                
+                                // Question 3: Social
+                                setTimeout(() => {
+                                    addMessage("¡Perfecto! ¿Con quién vas a ver la película?", 'bot');
+                                    addQuizChoices([
+                                        { label: "👤 En solitario", value: "solo" },
+                                        { label: "💑 Noche de cita", value: "couple" },
+                                        { label: "👨‍👩‍👧‍👦 Familiar", value: "family" }
+                                    ], (socialOpt) => {
+                                        addMessage(`Compañía: ${socialOpt.label}`, 'user');
+                                        
+                                        // Send answers to backend
+                                        fetchQuizRecommendation(moodOpt.value, eraOpt.value, socialOpt.value);
+                                    });
+                                }, 500);
+                            });
+                        }, 500);
+                    });
+                }, 500);
+            }
+
+            function addQuizChoices(options, callback) {
+                const choicesDiv = document.createElement('div');
+                choicesDiv.className = 'chat-quiz-choices-container';
+
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'chat-quick-action-btn';
+                    btn.style.padding = '8px 14px';
+                    btn.style.fontSize = '0.78rem';
+                    btn.textContent = opt.label;
+                    btn.addEventListener('click', () => {
+                        choicesDiv.remove();
+                        callback(opt);
+                    });
+                    choicesDiv.appendChild(btn);
+                });
+                
+                messages.appendChild(choicesDiv);
+                scrollToBottom();
+            }
+
+            async function fetchQuizRecommendation(mood, era, social) {
+                const typingEl = addTyping();
+                const TMDB_API_KEY = "ece12ff481fd8f23e34255eadfae14f0";
+                
+                try {
+                    const res = await fetch('/Chatbot', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            Mensaje: "QUIZ_RESULT",
+                            Pelicula: activeMovie,
+                            Idioma: navigator.language || 'es-MX',
+                            QuizAnswers: { mood, era, social }
+                        })
+                    });
+                    
+                    if (!res.ok) throw new Error("HTTP error " + res.status);
+                    
+                    const { quizResult } = await res.json();
+                    typingEl.remove();
+                    
+                    if (quizResult && quizResult.title) {
+                        const searchRes = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&language=es-MX&query=${encodeURIComponent(quizResult.title)}&page=1`);
+                        const searchData = await searchRes.json();
+                        const firstResult = searchData.results?.[0];
+                        
+                        if (firstResult && (firstResult.media_type === 'movie' || firstResult.media_type === 'tv')) {
+                            renderRecommendationCard(quizResult, firstResult);
+                        } else {
+                            addMessage(`🎬 **Recomendación**: **${quizResult.title}**\n\n${quizResult.overview}`, 'bot');
+                        }
+                    } else {
+                        addMessage("⚠️ Disculpa, no pude encontrar una película adecuada. Por favor, reintenta.", 'bot');
+                    }
+                } catch (err) {
+                    console.error("[CineBot Quiz Error]", err);
+                    typingEl.remove();
+                    addMessage("⚠️ Algo salió mal al buscar la recomendación. Por favor, reintenta.", 'error', false);
+                } finally {
+                    input.disabled = false;
+                    input.placeholder = "Ask about the movie...";
+                    sendBtn.disabled = input.value.trim() === '';
+                    if (quickActions) {
+                        quickActions.style.display = 'flex';
+                    }
+                }
+            }
+
+            function renderRecommendationCard(quizResult, tmdbInfo) {
+                const card = document.createElement('div');
+                card.className = 'chat-rec-card';
+                
+                const title = tmdbInfo.title || tmdbInfo.name;
+                const year = new Date(tmdbInfo.release_date || tmdbInfo.first_air_date).getFullYear() || 'N/A';
+                const rating = tmdbInfo.vote_average ? tmdbInfo.vote_average.toFixed(1) : 'N/A';
+                const posterUrl = tmdbInfo.poster_path 
+                    ? `https://image.tmdb.org/t/p/w185${tmdbInfo.poster_path}` 
+                    : 'https://via.placeholder.com/60x90/111424/ffffff?text=N/A';
+                    
+                card.innerHTML = `
+                    <div class="rec-card-header">
+                        <img src="${posterUrl}" alt="${title}" class="rec-card-poster">
+                        <div class="rec-card-meta">
+                            <h4 class="rec-card-title">${title}</h4>
+                            <span class="rec-card-year">(${year})</span>
+                            <div class="rec-card-rating">
+                                <span class="rec-card-star">★</span>
+                                <span>${rating}/10</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="rec-card-overview">${quizResult.overview}</p>
+                    <button class="rec-card-btn">
+                        🍿 Ver detalles
+                    </button>
+                `;
+                
+                card.querySelector('.rec-card-btn').addEventListener('click', async () => {
+                    if (typeof toggleChat === 'function') {
+                        toggleChat(false);
+                    }
+                    
+                    saveCurrentState();
+                    window.scrollTo({ top: 30, behavior: 'smooth' });
+                    
+                    const searchInput = document.getElementById('search-query');
+                    if (searchInput) {
+                        searchInput.value = title;
+                    }
+                    
+                    try {
+                        const TMDB_API_KEY = "ece12ff481fd8f23e34255eadfae14f0";
+                        const type = tmdbInfo.media_type;
+                        const id = tmdbInfo.id;
+                        const lang = navigator.language || 'es-MX';
+                        
+                        const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,external_ids,videos,images,watch/providers`);
+                        const mediaDetails = await detailsRes.json();
+                        if (typeof renderMovieDetails === 'function') {
+                            renderMovieDetails(mediaDetails, type);
+                        }
+                    } catch (err) {
+                        console.error("[CineBot Rec Click Error]", err);
+                    }
+                });
+                
+                messages.appendChild(card);
+                scrollToBottom();
+                
+                if (!movieChats[activeMovie]) {
+                    movieChats[activeMovie] = [];
+                }
+                movieChats[activeMovie].push({
+                    role: 'assistant',
+                    content: `**${title}** (${year}) - ★ ${rating}/10\n\n${quizResult.overview}`,
+                    type: 'bot'
+                });
+                saveChats();
+            }
+
+            if (quizBtn) {
+                quizBtn.addEventListener('click', startQuizFlow);
+            }
+
+
 
         /* ── Input resize & enable ───────────────────────────────── */
         input.addEventListener('input', () => {
@@ -1212,7 +1987,9 @@
             const texto = input.value.trim();
             if (!texto) return;
 
-            const pelicula = getCurrentMovie();
+            const historyToSend = (movieChats[activeMovie] || [])
+                .filter(m => m.role === 'user' || m.role === 'assistant')
+                .map(m => ({ role: m.role, content: m.content }));
 
             addMessage(texto, 'user');
             input.value = '';
@@ -1225,10 +2002,11 @@
                 const res = await fetch('/Chatbot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        Mensaje: texto, 
-                        Pelicula: pelicula,
-                        Idioma: navigator.language || 'es-MX'
+                    body: JSON.stringify({
+                        Mensaje: texto,
+                        Pelicula: activeMovie,
+                        Idioma: navigator.language || 'es-MX',
+                        Historial: historyToSend
                     })
                 });
 
@@ -1239,7 +2017,7 @@
                 addMessage(respuesta || '(empty response)', 'bot');
             } catch (err) {
                 typingEl.remove();
-                addMessage('⚠️ Something went wrong. Please try again.', 'error');
+                addMessage('⚠️ Something went wrong. Please try again.', 'error', false);
                 console.error('[CineBot]', err);
             }
         });
@@ -1247,13 +2025,16 @@
         /* ── Auto-update movie tag when backdrop changes ────────── */
         function syncMovieTag() {
             const newTitle = getCurrentMovie();
-            if (movieTag.textContent !== newTitle) {
-                movieTag.textContent = newTitle;
-            }
-            if (isOpen) {
-                const statusEl = document.querySelector('.chat-status');
-                if (statusEl && newTitle && statusEl.textContent !== `Talking about: ${newTitle}`) {
-                    statusEl.textContent = `Talking about: ${newTitle}`;
+            if (newTitle !== lastSyncedMovie) {
+                lastSyncedMovie = newTitle;
+                initMovieChat(newTitle);
+                
+                // Do not auto-switch the active chat tab if we are on the homepage
+                const isAtHome = !document.querySelector('.cinematic-view');
+                if (isOpen && activeMovie !== 'General' && !isAtHome) {
+                    switchMovieTab(newTitle);
+                } else if (isOpen) {
+                    renderTabs();
                 }
             }
         }
@@ -1274,7 +2055,7 @@
             snapToSide(false);
             if (isOpen) positionWindow();
         });
-    })();
+    }) ();
     </script>
 </body>
 

@@ -71,11 +71,91 @@ async function fetchTMDBData(query, langCode) {
 }
 
 export default async function handler(request, _context) {
-    const { Mensaje, Pelicula, Idioma } = await request.json();
+    const body = await request.json();
+    const { Mensaje, Pelicula, Idioma, Historial, QuizAnswers } = body;
     const origin = request.headers.get("origin") || "";
     
     // Normalizar código de idioma (ej. "es-419" o "es-MX" -> "es-ES", "en-US" -> "en-US")
     const langCode = Idioma || "es-ES";
+
+    // ─── Quiz Recommendation Handler ───
+    if (QuizAnswers) {
+        const { mood, era, social } = QuizAnswers;
+        const systemPromptQuiz = `Sos un experto en cine. Tu tarea es recomendar una sola película o serie en base a las 3 respuestas del usuario (Ánimo/Mood, Era, Compañía/Social).
+Debes responder ÚNICAMENTE con un objeto JSON válido, sin formato markdown extra (sin triple backticks \`\`\`json), con la estructura exacta:
+{
+  "title": "Título exacto de la película o serie en inglés o español",
+  "overview": "Una breve reseña de 2 oraciones explicando de manera entretenida por qué esta recomendación es perfecta para las opciones elegidas."
+}`;
+
+        const promptQuiz = `Opciones elegidas por el usuario:
+- Ánimo (Mood): ${mood}
+- Era: ${era}
+- Compañía (Social): ${social}
+
+Recomendá una película o serie ideal que cumpla estrictamente con esto. Recordá responder sólo el JSON.`;
+
+        try {
+            const apiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${APIkey}`,
+                    "HTTP-Referer": origin,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "openrouter/auto",
+                    messages: [
+                        { role: "system", content: systemPromptQuiz },
+                        { role: "user", content: promptQuiz }
+                    ],
+                    max_tokens: 300,
+                    temperature: 0.7
+                })
+            });
+
+            if (apiResponse.ok) {
+                const data = await apiResponse.json();
+                let contentText = data.choices?.[0]?.message?.content || "";
+                contentText = contentText.replace(/```json/g, "").replace(/```/g, "").trim();
+                const recommendation = JSON.parse(contentText);
+                return new Response(
+                    JSON.stringify({ quizResult: recommendation }),
+                    { status: 200, headers: { "Content-Type": "application/json" } }
+                );
+            }
+        } catch (err) {
+            console.error("[CineBot Quiz AI Error]", err);
+        }
+
+        // Fallback local en caso de error o respuesta fallida
+        let fallbackTitle = "Inception";
+        let fallbackOverview = "Una obra maestra de Christopher Nolan sobre el control de los sueños que te volará la cabeza y te mantendrá pensando por días.";
+        
+        if (mood === "laugh") {
+            fallbackTitle = "Superbad";
+            fallbackOverview = "Una de las comedias adolescentes más divertidas de la historia sobre tres amigos intentando comprar alcohol para una fiesta.";
+        } else if (mood === "cry") {
+            fallbackTitle = "The Pursuit of Happyness";
+            fallbackOverview = "Una inspiradora historia de lucha, perseverancia y superación de un padre buscando un mejor futuro para su hijo.";
+        } else if (mood === "scared") {
+            fallbackTitle = "The Conjuring";
+            fallbackOverview = "Una gran dosis de terror sobrenatural y suspenso clásico para quienes buscan saltar del sofá.";
+        } else if (mood === "think") {
+            fallbackTitle = "Interstellar";
+            fallbackOverview = "Un viaje espacial épico y emocional que desafía el tiempo, la física y expandirá tu horizonte sobre el cosmos.";
+        }
+
+        return new Response(
+            JSON.stringify({
+                quizResult: {
+                    title: fallbackTitle,
+                    overview: fallbackOverview
+                }
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+    }
 
     // Buscar ficha oficial de TMDB con el idioma del usuario
     const tmdbData = await fetchTMDBData(Pelicula, langCode);
@@ -93,10 +173,17 @@ Géneros: ${tmdbData.genres}
 Sinopsis: ${tmdbData.overview}`;
     }
 
-    const prompt_consulta = `${contextString}\n\nConsulta del usuario: ${Mensaje}`;
     let respuestaTexto = "";
 
     try {
+        const enhancedSystemPrompt = systemPrompt + (tmdbData ? `\n\n[FICHA OFICIAL DE TMDB PARA LA PELÍCULA/SERIE ACTUAL]\n${contextString}` : "");
+        const chatHistory = (Historial || []).filter(msg => msg.role === 'user' || msg.role === 'assistant');
+        const messagesToSend = [
+            { role: "system", content: enhancedSystemPrompt },
+            ...chatHistory,
+            { role: "user", content: Mensaje }
+        ];
+
         const apiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -106,10 +193,7 @@ Sinopsis: ${tmdbData.overview}`;
             },
             body: JSON.stringify({
                 model: "openrouter/auto",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: prompt_consulta }
-                ],
+                messages: messagesToSend,
                 max_tokens: 1000
             })
         });
