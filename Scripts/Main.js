@@ -149,6 +149,43 @@ window.openLightbox = function(mediaHTML, title = '', overview = '', year = '', 
     
     lightbox.classList.add('active');
 };
+
+// Opens a YouTube video in the lightbox by building the iframe directly in JS
+// (avoids URL corruption from HTML string serialization inside onclick attributes)
+window.openVideoLightbox = function(videoKey, title = '', overview = '', year = '', rating = '') {
+    const lightbox = document.getElementById('media-lightbox');
+    const body = document.getElementById('lightbox-body');
+    const detailsContainer = document.getElementById('lightbox-details');
+    if (!lightbox || !body || !detailsContainer) return;
+
+    body.innerHTML = '';
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube-nocookie.com/embed/${videoKey}?rel=0&autoplay=1`;
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.style.cssText = 'width:100%;height:100%;border:none;';
+    body.appendChild(iframe);
+
+    if (title) {
+        detailsContainer.style.display = 'flex';
+        let ratingHTML = rating ? `<span class="lightbox-details-rating">⭐ ${rating}</span>` : '';
+        detailsContainer.innerHTML = `
+            <h4 class="lightbox-details-title">${title}</h4>
+            <div class="lightbox-details-meta">
+                ${year ? `<span>${year}</span>` : ''}
+                ${year && rating ? `<span>•</span>` : ''}
+                ${ratingHTML}
+            </div>
+            ${overview ? `<p class="lightbox-details-overview">${overview}</p>` : ''}
+        `;
+    } else {
+        detailsContainer.style.display = 'none';
+        detailsContainer.innerHTML = '';
+    }
+
+    lightbox.classList.add('active');
+};
 const lightboxEl = document.getElementById('media-lightbox');
 const lightboxCloseEl = document.getElementById('lightbox-close');
 if (lightboxEl) {
@@ -1271,13 +1308,12 @@ async function loadPopularTrailers() {
             if (validTrailers.length > 0) {
                 container.className = "media-grid-trailers collapsed";
                 container.innerHTML = validTrailers.map(t => {
-                    const videoEmbed = `<iframe src="https://www.youtube.com/embed/${t.key}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>`;
-                    const escapedEmbed = videoEmbed.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
-                    const escapedTitle = t.movieTitle.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
-                    const escapedSub = t.trailerName.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
                     return `
-                        <div class="trailer-card" onclick="openLightbox('${escapedEmbed}', '${escapedTitle}', '${escapedSub}')">
-                            <img src="${t.backdrop}" alt="${t.movieTitle}" loading="lazy">
+                        <div class="trailer-card"
+                            data-video-key="${t.key}"
+                            data-video-title="${t.movieTitle.replace(/"/g, '&quot;')}"
+                            data-video-sub="${t.trailerName.replace(/"/g, '&quot;')}">
+                            <img src="${t.backdrop}" alt="${t.movieTitle.replace(/"/g, '&quot;')}" loading="lazy">
                             <div class="trailer-card-overlay">
                                 <h3 class="trailer-card-title">${t.movieTitle}</h3>
                                 <p class="trailer-card-subtitle">${t.trailerName}</p>
@@ -1288,6 +1324,12 @@ async function loadPopularTrailers() {
                         </div>
                     `;
                 }).join('');
+                
+                container.querySelectorAll('.trailer-card[data-video-key]').forEach(card => {
+                    card.addEventListener('click', () => {
+                        window.open(`https://www.youtube.com/watch?v=${card.dataset.videoKey}`, '_blank', 'noopener,noreferrer');
+                    });
+                });
 
                 const nextEl = container.nextElementSibling;
                 if (nextEl && nextEl.classList.contains('expand-btn-container')) {
@@ -1711,10 +1753,13 @@ function renderMovieDetails(details, mediaType) {
         const escapedOverview = details.overview ? details.overview.replace(/"/g, '&quot;').replace(/'/g, '\\\'') : '';
         
         if (item.type === 'video') {
-            const videoEmbed = `<iframe src="https://www.youtube.com/embed/${item.key}?autoplay=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>`;
-            const escapedEmbed = videoEmbed.replace(/"/g, '&quot;').replace(/'/g, '\\\'');
             return `
-                <div class="media-capture-card" onclick="openLightbox('${escapedEmbed}', '${escapedTitle}', '${escapedOverview}', '${year}', '${ratingStr}')">
+                <div class="media-capture-card"
+                    data-video-key="${item.key}"
+                    data-video-title="${title.replace(/"/g, '&quot;')}"
+                    data-video-overview="${(details.overview || '').replace(/"/g, '&quot;')}"
+                    data-video-year="${year}"
+                    data-video-rating="${ratingStr}">
                     <span class="video-badge">VIDEO</span>
                     <img src="${item.thumbnail}" alt="${item.title.replace(/"/g, '&quot;')}" loading="lazy">
                     <div class="play-overlay">
@@ -1825,6 +1870,13 @@ function renderMovieDetails(details, mediaType) {
     `;
 
     main.innerHTML = html;
+
+    // Attach click listeners for video cards — opens YouTube directly (mobile opens app)
+    main.querySelectorAll('.media-capture-card[data-video-key]').forEach(card => {
+        card.addEventListener('click', () => {
+            window.open(`https://www.youtube.com/watch?v=${card.dataset.videoKey}`, '_blank', 'noopener,noreferrer');
+        });
+    });
     
     // Extract and apply poster color
     if (details.poster_path) {
