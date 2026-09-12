@@ -452,11 +452,22 @@ function initCarousel() {
 	const titleEl = document.getElementById('backdrop-title');
 	const titleRowEl = infoEl ? infoEl.querySelector('.backdrop-title-row') : null;
 
+	// El mismo título se refleja como subtítulo de "PostCredits" en Inicio (el widget
+	// flotante se oculta ahí para no superponerse con el hero).
+	const heroNowEl = document.getElementById('hero-now');
+	const heroNowTitleEl = document.getElementById('hero-now-title');
+	const heroNowLabelEl = document.getElementById('hero-now-label');
+	const labelSourceEl = document.getElementById('backdrop-label');
+
 	const updateTitle = async (index) => {
 		if (titleEl && backdrops[index]) {
 			titleEl.textContent = backdrops[index].title;
 			if (titleRowEl) titleRowEl.classList.add('visible');
-			
+
+			if (heroNowTitleEl) heroNowTitleEl.textContent = backdrops[index].title;
+			if (heroNowLabelEl && labelSourceEl) heroNowLabelEl.textContent = labelSourceEl.textContent;
+			if (heroNowEl) heroNowEl.classList.add('visible');
+
 			const smallUrl = backdrops[index].url.replace('original', 'w300');
 			const color = await extractColorFromUrl(smallUrl);
 			const root = document.documentElement;
@@ -493,6 +504,7 @@ function initCarousel() {
 
 		backdropElements[currentBackdropIndex].classList.remove('active');
 		if (titleRowEl) titleRowEl.classList.remove('visible');
+		if (heroNowEl) heroNowEl.classList.remove('visible');
 
 		currentBackdropIndex = (currentBackdropIndex + 1) % backdropElements.length;
 		backdropElements[currentBackdropIndex].classList.add('active');
@@ -536,6 +548,14 @@ const viewBackdropBtn = document.getElementById('view-backdrop-btn');
 
 if (viewBackdropBtn) {
 	viewBackdropBtn.addEventListener('click', () => window.toggleBackdropView());
+}
+
+// En pantalla completa <main> queda oculto (y con él la fila de controles del hero),
+// así que la salida es este botón, visible solo en ese modo.
+const fullscreenExitBtn = document.getElementById('fullscreen-exit-btn');
+
+if (fullscreenExitBtn) {
+	fullscreenExitBtn.addEventListener('click', () => window.toggleBackdropView());
 }
 
 // Evitar desplazamiento en la página al estar en vista de fondo (backdrop-view-mode) o con el menú de configuración activo
@@ -617,6 +637,60 @@ if (settingsCloseBtn && settingsMenu) {
 		e.stopPropagation();
 		settingsMenu.classList.remove('active');
 	});
+}
+
+/* Cerrar deslizando hacia abajo, igual que la hoja del chat: el tirador arrastra la
+   hoja, el fondo se va aclarando y al pasar de 120px se cierra. */
+function enableSheetSwipe(sheetEl, closeSheet) {
+	if (!sheetEl) return;
+	const handle = sheetEl.querySelector('[data-sheet-handle]');
+	if (!handle) return;
+
+	const setOverlayProgress = (value) => {
+		document.body.style.setProperty('--sheet-drag-progress', String(value));
+	};
+
+	handle.addEventListener('touchstart', (e) => {
+		const startY = e.touches[0].clientY;
+		let currentY = startY;
+
+		sheetEl.classList.add('sheet-dragging');
+
+		const onMove = (moveEvent) => {
+			currentY = moveEvent.touches[0].clientY;
+			const dy = Math.max(0, currentY - startY);
+			sheetEl.style.transform = `translateY(${dy}px)`;
+			setOverlayProgress(Math.max(0, 1 - dy / 300));
+			moveEvent.preventDefault();
+		};
+
+		const onEnd = () => {
+			document.removeEventListener('touchmove', onMove);
+			document.removeEventListener('touchend', onEnd);
+			sheetEl.classList.remove('sheet-dragging');
+
+			if (currentY - startY > 120) {
+				sheetEl.style.transform = 'translateY(100%)';
+				setOverlayProgress(0);
+				setTimeout(() => {
+					closeSheet();
+					sheetEl.style.transform = '';
+					setOverlayProgress(1);
+				}, 380);
+			} else {
+				sheetEl.style.transform = '';
+				setOverlayProgress(1);
+			}
+		};
+
+		document.addEventListener('touchmove', onMove, { passive: false });
+		document.addEventListener('touchend', onEnd, { passive: true });
+		e.preventDefault();
+	}, { passive: false });
+}
+
+if (settingsMenu) {
+	enableSheetSwipe(settingsMenu, () => settingsMenu.classList.remove('active'));
 }
 
 const downloadBackdropBtn = document.getElementById('download-backdrop-btn');
@@ -2399,6 +2473,34 @@ if (backToTopBtn) {
 }
 
 // --- Cine-Roulette Feature ---
+// Azar sin sesgo: crypto cuando está disponible, con rechazo del resto que desbalancea
+// el módulo (Math.random es el respaldo).
+function randomInt(max) {
+    if (max <= 0) return 0;
+    const crypto = window.crypto || window.msCrypto;
+    if (crypto && crypto.getRandomValues) {
+        const limit = Math.floor(0xFFFFFFFF / max) * max;
+        const buf = new Uint32Array(1);
+        do {
+            crypto.getRandomValues(buf);
+        } while (buf[0] >= limit);
+        return buf[0] % max;
+    }
+    return Math.floor(Math.random() * max);
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = randomInt(i + 1);
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+// Nº de páginas por género (para sortear sobre todo el catálogo sin repetir la petición sonda)
+const roulettePageCache = new Map();
+let lastRouletteWinnerId = null;
+
 function initCineRoulette() {
     const rouletteBtn = document.getElementById('roulette-backdrop-btn');
     const modal = document.getElementById('roulette-modal');
@@ -2428,6 +2530,7 @@ function initCineRoulette() {
     };
 
     closeBtn.addEventListener('click', closeRouletteModal);
+    enableSheetSwipe(modal.querySelector('.roulette-modal-content'), closeRouletteModal);
 
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -2443,28 +2546,48 @@ function initCineRoulette() {
         track.style.transform = 'translateX(0)';
 
         const genre = genreSelect.value;
-        const randomPage = Math.floor(Math.random() * 5) + 1;
         const lang = navigator.language || 'es-MX';
-        
+
         try {
-            const url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genre}&page=${randomPage}&vote_average.gte=6.5&sort_by=popularity.desc&language=${lang}`;
-            const res = await fetch(url);
+            const discover = (page) => `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genre}&page=${page}&vote_average.gte=6.2&vote_count.gte=200&sort_by=popularity.desc&language=${lang}&include_adult=false`;
+
+            // Antes se pedía siempre una de las 5 primeras páginas y el ganador era el índice
+            // fijo 23 del carril (= el 4º resultado de esa página), así que solo había 5
+            // películas posibles. Ahora se sortea una página de todo el catálogo del género…
+            let pageCount = roulettePageCache.get(genre);
+            if (!pageCount) {
+                const probe = await fetch(discover(1));
+                const probeData = await probe.json();
+                pageCount = Math.min(probeData.total_pages || 1, 500);
+                roulettePageCache.set(genre, pageCount);
+            }
+
+            const res = await fetch(discover(randomInt(pageCount) + 1));
             const data = await res.json();
-            
+
             if (!data.results || data.results.length < 10) {
                 alert("No se encontraron suficientes películas para esta selección. Intenta con otro género.");
                 spinBtn.disabled = false;
                 return;
             }
 
-            let movies = [...data.results];
-            while (movies.length < 30) {
-                movies = movies.concat(data.results);
+            // …y el carril se baraja, así que el ganador no depende de la posición en TMDB.
+            let pool = shuffleArray(data.results.filter(m => m.poster_path));
+            if (pool.length < 6) pool = shuffleArray([...data.results]);
+            if (pool.length > 1 && pool[0].id === lastRouletteWinnerId) {
+                pool.push(pool.shift());
             }
-            movies = movies.slice(0, 30);
 
-            const winningIndex = 23;
+            const movies = [];
+            while (movies.length < 36) {
+                movies.push(...shuffleArray([...pool]));
+            }
+            movies.length = 36;
+
+            // …y hasta el punto de parada se sortea dentro del tramo final del carril.
+            const winningIndex = 26 + randomInt(6);
             const winner = movies[winningIndex];
+            lastRouletteWinnerId = winner.id;
 
             track.innerHTML = movies.map((m, idx) => {
                 const poster = m.poster_path ? `https://image.tmdb.org/t/p/w185${m.poster_path}` : 'https://via.placeholder.com/120x180?text=No+Poster';
@@ -2475,15 +2598,25 @@ function initCineRoulette() {
                 `;
             }).join('');
 
-            const cardWidth = 136;
-            const spinTranslation = winningIndex * cardWidth;
+            // El paso se mide del DOM (las tarjetas cambian de tamaño en móvil).
+            const firstItem = track.querySelector('.roulette-item');
+            const gap = parseFloat(getComputedStyle(track).columnGap || '16') || 16;
+            const cardWidth = (firstItem ? firstItem.offsetWidth : 120) + gap;
+            // Parada ligeramente descentrada dentro de la tarjeta ganadora: más natural
+            // y deja claro que el punto de frenado no está prefijado.
+            const jitter = randomInt(Math.round(cardWidth * 0.5)) - Math.round(cardWidth * 0.25);
+            const spinTranslation = winningIndex * cardWidth + jitter;
+            const spinDuration = 3.6 + randomInt(1200) / 1000;
+
+            modal.classList.add('spinning');
 
             setTimeout(() => {
-                track.style.transition = 'transform 4s cubic-bezier(0.15, 0.85, 0.35, 1)';
+                track.style.transition = `transform ${spinDuration}s cubic-bezier(0.15, 0.85, 0.35, 1)`;
                 track.style.transform = `translateX(-${spinTranslation}px)`;
             }, 50);
 
             setTimeout(() => {
+                modal.classList.remove('spinning');
                 const winElement = document.getElementById(`roulette-item-${winningIndex}`);
                 if (winElement) winElement.classList.add('active');
 
@@ -2519,7 +2652,7 @@ function initCineRoulette() {
                     }
                 });
 
-            }, 4100);
+            }, spinDuration * 1000 + 120);
 
         } catch (err) {
             console.error(err);

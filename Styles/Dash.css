@@ -114,6 +114,106 @@ input {
 	font-weight: 500;
 }
 
+/* Subtítulo del hero: la película que se está mostrando de fondo. Reemplaza al widget
+   flotante en Inicio, que se superponía con el título "PostCredits". */
+.hero-header__now {
+	margin: 14px auto 0;
+	max-width: min(100%, 40rem);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	text-align: center;
+	opacity: 0;
+	transition: opacity 0.8s ease;
+}
+
+.hero-header__now.visible {
+	opacity: 1;
+}
+
+.hero-header__now-label {
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.15em;
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.6);
+	text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
+}
+
+.hero-header__now-title {
+	font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+	font-weight: 500;
+	color: #fff;
+	line-height: 1.3;
+	overflow-wrap: break-word;
+	text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
+}
+
+/* Los controles del fondo viven dentro del hero de Inicio (flujo normal, no fijos), así
+   que se deslizan junto con la sección al cambiar de pestaña y nunca flotan sobre otra. */
+.backdrop-controls {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	position: relative;
+	width: fit-content;
+	margin: 20px auto 0;
+	padding: 6px;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.42);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+}
+
+.backdrop-controls .view-backdrop-btn {
+	padding: 10px;
+	border-color: transparent;
+	background: transparent;
+}
+
+.backdrop-controls .view-backdrop-btn:hover {
+	background: rgba(255, 255, 255, 0.16);
+	border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* El widget fijo ya solo sirve para el título en pantalla completa. */
+body:not(.backdrop-view-mode) .current-backdrop-info {
+	display: none !important;
+}
+
+/* Salir de pantalla completa. Sin la clase .view-backdrop-btn a propósito: aquella
+   declara `display: flex` más abajo en la hoja y hacía que el botón se viera siempre. */
+.fullscreen-exit-btn {
+	display: none;
+	position: fixed;
+	top: 24px;
+	right: 24px;
+	z-index: 3000;
+	padding: 12px;
+	border-radius: 50%;
+	cursor: pointer;
+	align-items: center;
+	justify-content: center;
+	color: var(--accent);
+	background: rgba(0, 0, 0, 0.6);
+	border: 1px solid rgba(56, 189, 248, 0.4);
+	transition: background 0.3s ease, color 0.3s ease;
+}
+
+.fullscreen-exit-btn:hover {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.2);
+}
+
+body.backdrop-view-mode .fullscreen-exit-btn {
+	display: flex;
+}
+
+
 .search-bar {
 	display: flex;
 	gap: 12px;
@@ -286,12 +386,6 @@ body.backdrop-view-mode .tab-footer-nav {
 		gap: 4px;
 		padding: 7px;
 	}
-}
-
-/* Cine-Roulette trigger stays hidden from the minimal Inicio widget; the settings
-   button is back with its full backdrop-source / favorites / order / speed / download panel. */
-#roulette-backdrop-btn {
-	display: none;
 }
 
 /* The big hero (title/backdrop controls) lives only inside the Inicio tab panel. Hide it
@@ -967,7 +1061,8 @@ body.is-scrolled .hero-header__title {
 	cursor: pointer;
 }
 
-body.is-scrolled .hero-header__subtitle {
+body.is-scrolled .hero-header__subtitle,
+body.is-scrolled .hero-header__now {
 	display: none;
 }
 
@@ -1052,6 +1147,16 @@ body.is-scrolled .search-bar__input {
 	.current-backdrop-info {
 		top: 70px;
 		right: 16px;
+		/* Deja libre la columna izquierda para el título del hero. */
+		max-width: calc(100% - 32px);
+	}
+
+	.backdrop-title-row {
+		max-width: min(58vw, 240px);
+	}
+
+	.current-backdrop-info .title {
+		font-size: 1.05rem;
 	}
 
 	body.backdrop-view-mode .current-backdrop-info {
@@ -1067,6 +1172,11 @@ body.is-scrolled .search-bar__input {
 		align-items: center;
 		text-align: center;
 		gap: 4px;
+	}
+
+	body.backdrop-view-mode .current-backdrop-info .title {
+		text-align: center;
+		font-size: 1.3rem;
 	}
 }
 
@@ -1131,8 +1241,12 @@ body.tabs-active:not([data-active-tab="home"]) .color-overlay {
 
 .backdrop-title-row {
 	display: flex;
-	align-items: center;
-	gap: 12px;
+	/* El título va arriba y "Now Showing" queda como su subtítulo debajo,
+	   así no compiten por el ancho ni se superponen al envolverse. */
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+	max-width: min(46vw, 320px);
 	opacity: 0;
 	transition: opacity 0.8s ease;
 }
@@ -1142,18 +1256,24 @@ body.tabs-active:not([data-active-tab="home"]) .color-overlay {
 }
 
 .current-backdrop-info .label {
-	font-size: 0.75rem;
+	order: 2;
+	font-size: 0.7rem;
 	text-transform: uppercase;
 	letter-spacing: 0.15em;
 	color: rgba(255, 255, 255, 0.6);
 	font-weight: 700;
+	white-space: nowrap;
+	line-height: 1.2;
 }
 
 .current-backdrop-info .title {
+	order: 1;
 	font-size: 1.25rem;
 	color: #fff;
 	font-weight: 500;
-	max-width: 300px;
+	max-width: 100%;
+	line-height: 1.25;
+	text-align: right;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 }
@@ -1590,6 +1710,18 @@ body.backdrop-view-mode .settings-menu {
 	transition: background 0.3s ease;
 }
 
+/* El panel de ajustes vive a nivel raíz: en escritorio se abre centrado bajo la barra
+   de búsqueda, en móvil como hoja inferior (ver el bloque de @media más abajo). */
+@media (min-width: 769px) {
+	.settings-menu {
+		top: 110px;
+		left: 50%;
+		right: auto;
+		transform: translateX(-50%);
+		max-height: min(72vh, 620px);
+	}
+}
+
 .settings-menu.active {
 	display: flex;
 }
@@ -1712,6 +1844,16 @@ body.backdrop-view-mode .fullscreen-brand {
    widget lives outside <main>, so it stays clickable as the one universal way back. */
 body.backdrop-view-mode .current-backdrop-info {
 	display: flex !important;
+}
+
+/* En pantalla completa solo queda el título de la película: la etiqueta
+   ("Now Showing" / "Favorite") sobra y ensucia la imagen. */
+body.backdrop-view-mode .current-backdrop-info .label {
+	display: none;
+}
+
+body.backdrop-view-mode .backdrop-title-row {
+	max-width: none;
 }
 
 body.backdrop-view-mode .color-overlay,
@@ -2807,14 +2949,12 @@ body.backdrop-view-mode .header-credits {
 	display: none;
 }
 
-/* Mobile Settings Menu Sidebar */
+/* Móvil: ajustes y Cine-Roulette comparten exactamente la misma hoja inferior
+   (mismo alto, radio, fondo, padding, pastilla y curva de animación que #chat-window). */
 @media (max-width: 768px) {
-	body:has(#backdrop-settings-menu.active) {
+	body:has(#backdrop-settings-menu.active),
+	body.roulette-active {
 		overflow: hidden !important;
-	}
-
-	body:has(#backdrop-settings-menu.active) .current-backdrop-info {
-		z-index: 10000 !important;
 	}
 
 	body:has(#backdrop-settings-menu.active)::after {
@@ -2823,62 +2963,104 @@ body.backdrop-view-mode .header-credits {
 		top: 0;
 		left: 0;
 		width: 100vw;
-		height: 100vh;
+		height: 100dvh;
 		background: rgba(0, 0, 0, 0.5);
 		z-index: 9998;
 		pointer-events: auto;
-		opacity: 1;
+		/* El arrastre del tirador baja este valor para aclarar el fondo */
+		opacity: var(--sheet-drag-progress, 1);
 	}
 
-	.settings-menu {
+	.roulette-modal {
+		align-items: flex-end;
+		justify-content: center;
+		background: rgba(0, 0, 0, calc(0.5 * var(--sheet-drag-progress, 1)));
+	}
+
+	/* La hoja: idéntica para ambos paneles */
+	.settings-menu,
+	.roulette-modal-content {
 		position: fixed !important;
-		top: 0 !important;
+		left: 0 !important;
 		right: 0 !important;
 		bottom: 0 !important;
-		height: 100vh !important;
-		max-height: 100vh !important;
-		width: min(85vw, 320px) !important;
+		top: auto !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		height: 82dvh !important;
+		max-height: 92dvh !important;
 		margin: 0 !important;
-		border-radius: 20px 0 0 20px !important;
+		border-radius: 24px 24px 0 0 !important;
 		border: none !important;
-		border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
-		z-index: 10000 !important;
-		display: flex !important;
-		transform: translateX(100%);
-		visibility: hidden;
-		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s, background 0.3s ease !important;
+		border-top: 1px solid rgba(255, 255, 255, 0.09) !important;
 		background: var(--surface-2) !important;
-		padding: 64px 20px 24px 20px !important; /* Extra top padding to clear status bars/notches */
+		padding: 8px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
 		box-sizing: border-box !important;
+		display: flex !important;
+		flex-direction: column !important;
+		align-items: stretch !important;
+		gap: 12px;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		z-index: 9999 !important;
+		transform: translateY(100%);
+		visibility: hidden;
+		transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.38s, background 0.3s ease !important;
 	}
 
-	.settings-menu.active {
-		display: flex !important;
-		transform: translateX(0) !important;
+	/* Tirador de arrastre, como el del chat */
+	.sheet-drag-handle {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding: 10px 0 12px;
+		margin: 0 -20px;
+		cursor: grab;
+		flex-shrink: 0;
+		touch-action: none;
+	}
+
+	.sheet-drag-handle span {
+		width: 44px;
+		height: 5px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.25);
+		transition: background 0.2s ease;
+	}
+
+	.sheet-drag-handle:active span {
+		background: rgba(255, 255, 255, 0.45);
+	}
+
+	/* Sin transición mientras el dedo arrastra */
+	.settings-menu.sheet-dragging,
+	.roulette-modal-content.sheet-dragging {
+		transition: none !important;
+	}
+
+	/* El aspa sobra: aquí se cierra deslizando o tocando fuera */
+	.roulette-close-btn {
+		display: none !important;
+	}
+
+	/* Sin !important en transform: el arrastre escribe transform en línea. */
+	.settings-menu.active,
+	.roulette-modal.active .roulette-modal-content {
+		transform: translateY(0);
 		visibility: visible !important;
 	}
+}
 
-	.settings-close-btn {
-		display: flex;
-		position: absolute;
-		top: 20px;
-		right: 20px;
-		background: rgba(255, 255, 255, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.7);
-		cursor: pointer;
-		padding: 8px;
-		align-items: center;
-		justify-content: center;
-		border-radius: 50%;
-		transition: background 0.2s, color 0.2s;
-		z-index: 10;
-	}
+/* Los paneles se cierran tocando fuera (y en móvil, deslizando el tirador). */
+.settings-close-btn {
+	display: none !important;
+}
 
-	.settings-close-btn:hover,
-	.settings-close-btn:active {
-		background: rgba(255, 255, 255, 0.15);
-		color: #fff;
+/* El tirador solo existe en la hoja móvil (en @media, no en regla suelta: al ir después
+   del bloque móvil con la misma especificidad, un `display: none` plano lo anulaba). */
+@media (min-width: 769px) {
+	.sheet-drag-handle {
+		display: none;
 	}
 }
 
@@ -3858,6 +4040,111 @@ html.roulette-active {
 .roulette-winner-btn:hover {
 	background: rgba(255, 255, 255, 0.1);
 	border-color: var(--accent);
+}
+
+/* --- Cine-Roulette: acabado del carril --- */
+/* Degradados en los bordes para que las tarjetas entren y salgan del carril sin cortes secos */
+.roulette-wheel-container {
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+	mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+	margin-bottom: 24px;
+}
+
+.roulette-pointer {
+	width: 2px;
+	background: var(--accent);
+	box-shadow: 0 0 12px 2px var(--title-glow, rgba(255, 183, 3, 0.55));
+}
+
+.roulette-item {
+	opacity: 0.42;
+	filter: saturate(0.7);
+	transition: opacity 0.35s ease, filter 0.35s ease, border-color 0.35s ease, transform 0.35s ease;
+}
+
+.roulette-item.active {
+	opacity: 1;
+	filter: none;
+	transform: scale(1.08);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Mientras gira, el carril entero se atenúa un poco y la aguja destaca */
+.roulette-modal.spinning .roulette-pointer {
+	box-shadow: 0 0 18px 4px var(--title-glow, rgba(255, 183, 3, 0.7));
+}
+
+.roulette-modal.spinning .roulette-item {
+	opacity: 0.6;
+}
+
+.roulette-winner-card {
+	margin-top: 24px;
+	background: rgba(255, 255, 255, 0.04);
+	border-color: rgba(255, 255, 255, 0.09);
+	animation: pc-rise 320ms ease-out both;
+}
+
+.roulette-winner-title {
+	white-space: normal;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+@media (max-width: 768px) {
+	.roulette-modal-title {
+		font-size: 1.45rem;
+		margin-top: 4px;
+	}
+
+	.roulette-modal-subtitle {
+		margin-bottom: 18px;
+	}
+
+	.roulette-genre-selector {
+		margin-bottom: 18px;
+		width: 100%;
+		justify-content: center;
+	}
+
+	.roulette-wheel-container {
+		height: 150px;
+		margin-bottom: 20px;
+		flex-shrink: 0;
+	}
+
+	.roulette-track {
+		gap: 12px;
+		padding: 0 calc(50% - 45px);
+	}
+
+	.roulette-item {
+		width: 90px;
+		height: 126px;
+	}
+
+	.roulette-spin-btn {
+		width: 100%;
+		padding: 14px 24px;
+	}
+
+	.roulette-winner-card {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 14px;
+		padding: 16px;
+	}
+
+	.roulette-winner-synopsis {
+		-webkit-line-clamp: 3;
+	}
+
+	.roulette-winner-btn {
+		width: 100%;
+		padding: 12px 16px;
+	}
 }
 
 /* --- Actor Drawer --- */
