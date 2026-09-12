@@ -3,22 +3,28 @@
 :root {
 	color-scheme: dark;
 	--bg: #050816;
-	--bg-soft: rgba(14, 22, 44, 0.72);
-	--bg-panel: rgba(10, 16, 32, 0.68);
+	--bg-soft: #0e162c;
+	--bg-panel: #0a1020;
 	--text: #f4f7fb;
 	--muted: #a8b3cf;
 	--accent: var(--title-color, #7dd3fc);
 	--accent-strong: #22c55e;
 	--line: rgba(148, 163, 184, 0.18);
-	--shadow: 0 24px 70px rgba(1, 6, 20, 0.45);
-	--radius-xl: 32px;
-	--radius-lg: 24px;
-	--radius-md: 18px;
+	--shadow: none;
+	--radius-xl: 20px;
+	--radius-lg: 16px;
+	--radius-md: 12px;
 
 	--title-color: #f1f5f9;
 	--title-glow: rgba(255, 122, 224, 0.7);
 	--title-glow-dim: rgba(122, 95, 255, 0.5);
 	--title-glow-dimmer: rgba(53, 190, 255, 0.4);
+
+	/* Solid surfaces used instead of heavy blur/transparency */
+	--surface-1: #12141d;
+	--surface-2: #1b1e29;
+	--surface-3: #23273380;
+	--border-subtle: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -62,13 +68,7 @@ input {
 }
 
 .hero-header__glow {
-	position: absolute;
-	inset: 0;
-	background:
-		radial-gradient(circle at 20% 18%, rgba(125, 211, 252, 0.24), transparent 22%),
-		radial-gradient(circle at 82% 22%, rgba(34, 197, 94, 0.15), transparent 20%),
-		radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.05), transparent 30%);
-	pointer-events: none;
+	display: none;
 }
 
 .hero-header__content {
@@ -81,16 +81,7 @@ input {
 	border: none;
 	border-radius: var(--radius-xl);
 	background: transparent;
-	backdrop-filter: none;
-	box-shadow: none;
 	text-align: center;
-	transform: translateX(0);
-	transition:
-		transform 220ms ease,
-		padding 220ms ease,
-		border-radius 220ms ease,
-		background 220ms ease,
-		box-shadow 220ms ease;
 	z-index: 1000;
 }
 
@@ -109,44 +100,7 @@ input {
 	align-items: center;
 	column-gap: 0.3em;
 	row-gap: 0;
-	text-shadow:
-		0 0 4px rgba(255, 255, 255, 0.7),
-		0 0 10px var(--title-glow),
-		0 0 24px var(--title-glow),
-		0 0 48px var(--title-glow-dim),
-		0 0 80px var(--title-glow-dimmer);
-	animation: neonFlicker 30s infinite;
 	transition: color 1s ease, text-shadow 1s ease;
-}
-
-@keyframes neonFlicker {
-
-	0%,
-	95.9%,
-	96.3%,
-	96.7%,
-	97.5%,
-	97.9%,
-	98.3%,
-	99.5%,
-	100% {
-		color: var(--title-color);
-		text-shadow:
-			0 0 4px rgba(255, 255, 255, 0.7),
-			0 0 10px var(--title-glow),
-			0 0 24px var(--title-glow),
-			0 0 48px var(--title-glow-dim),
-			0 0 80px var(--title-glow-dimmer);
-	}
-
-	96%,
-	96.5%,
-	97.7%,
-	98.1%,
-	99% {
-		color: #2a2a3e;
-		text-shadow: 0 0 2px rgba(255, 255, 255, 0.1);
-	}
 }
 
 .hero-header__subtitle {
@@ -157,7 +111,6 @@ input {
 	font-size: clamp(1.1rem, 2vw, 1.4rem);
 	line-height: 1.7;
 	transition: color 1s ease;
-	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 4px 24px rgba(0, 0, 0, 0.6);
 	font-weight: 500;
 }
 
@@ -168,9 +121,7 @@ input {
 	padding: 12px;
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	border-radius: 999px;
-	background: var(--search-bg, rgba(3, 7, 18, 0.48));
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
+	background: var(--surface-2);
 	width: min(100%, 720px);
 	position: relative;
 	transition: background 0.3s ease, border-color 0.3s ease;
@@ -192,8 +143,264 @@ input {
 	color: rgba(168, 179, 207, 0.7);
 }
 
+/* ===== Tabbed layout (Inicio / Películas & Series / Trailers / Noticias) ===== */
 
+body.tabs-active .page-shell {
+	height: 100svh;
+	min-height: 100svh;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
 
+body.tabs-active #main-content {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+}
+
+.tab-viewport {
+	display: flex;
+	width: 100%;
+	min-height: 0;
+	scroll-behavior: smooth;
+	overflow-x: hidden;
+}
+
+.tab-panel {
+	flex: 0 0 100%;
+	width: 100%;
+	min-width: 100%;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	-webkit-overflow-scrolling: touch;
+	padding: 96px 24px 150px;
+	box-sizing: border-box;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.tab-panel-inner {
+	width: min(100%, 1120px);
+	margin: 0 auto;
+}
+
+/* Inicio has no scrollable content of its own — just the full-bleed hero — so it must
+   never overflow (that would let the vertical scroll gesture fight the horizontal swipe
+   between tabs). */
+.tab-panel--home {
+	padding: 0;
+	overflow: hidden;
+}
+
+.tab-panel--home .hero-header {
+	height: 100%;
+	min-height: 0;
+}
+
+@media (max-width: 768px) {
+	.tab-viewport {
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+	}
+
+	.tab-panel {
+		scroll-snap-align: start;
+		scroll-snap-stop: always;
+		padding: 84px 16px 160px;
+	}
+
+	.tab-panel--home {
+		padding: 0;
+	}
+}
+
+/* Floating footer nav — always visible, including on detail pages (search results, movie/person),
+   where it doubles as the way back to the tabbed home layout. */
+.tab-footer-nav {
+	position: fixed;
+	left: 50%;
+	bottom: 22px;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 6px;
+	padding: 9px;
+	background: var(--surface-2);
+	border: 1px solid var(--border-subtle);
+	border-radius: 30px;
+	z-index: 1500;
+	max-width: calc(100vw - 24px);
+}
+
+/* Hide it in the fullscreen backdrop view (the "eye" button) so nothing overlays the image */
+body.backdrop-view-mode .tab-footer-nav {
+	display: none;
+}
+
+/* Icon-only at every width — labels live in the title/aria-label attributes */
+.tab-footer-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+	color: rgba(255, 255, 255, 0.55);
+	width: 52px;
+	height: 52px;
+	padding: 0;
+	border-radius: 18px;
+	cursor: pointer;
+	font-family: inherit;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tab-footer-btn span {
+	display: none;
+}
+
+.tab-footer-btn svg {
+	width: 22px;
+	height: 22px;
+	flex-shrink: 0;
+}
+
+.tab-footer-btn:hover {
+	color: #fff;
+}
+
+.tab-footer-btn.active {
+	background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.18));
+	color: var(--title-color, #fff);
+}
+
+@media (max-width: 520px) {
+	.tab-footer-btn {
+		width: 46px;
+		height: 46px;
+		border-radius: 15px;
+	}
+
+	.tab-footer-nav {
+		bottom: 14px;
+		gap: 4px;
+		padding: 7px;
+	}
+}
+
+/* Cine-Roulette trigger stays hidden from the minimal Inicio widget; the settings
+   button is back with its full backdrop-source / favorites / order / speed / download panel. */
+#roulette-backdrop-btn {
+	display: none;
+}
+
+/* The big hero (title/backdrop controls) lives only inside the Inicio tab panel. Hide it
+   whenever another tab is active so it can't leak over via its fixed "scrolled" state, and
+   hide it on detail pages too (movie/person/search results) — those already have their own
+   backdrop image and go-back button, so the global "Now Showing" widget just overlapped
+   their content instead of adding anything useful there. */
+body.tabs-active:not([data-active-tab="home"]) .hero-header,
+body.tabs-active:not([data-active-tab="home"]) .current-backdrop-info,
+body:not(.tabs-active) .current-backdrop-info {
+	display: none !important;
+}
+
+/* Slim floating search pill shown above every tab — truly floating (like the footer nav):
+   it overlays the content, which scrolls up behind it, rather than pushing it down.
+   Hidden on detail pages (search results / movie / person), which show the footer nav +
+   a back button instead. */
+.app-topbar {
+	position: fixed;
+	top: 18px;
+	left: 0;
+	right: 0;
+	z-index: 1600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 0 20px;
+	pointer-events: none;
+}
+
+/* Back button — only shown while browsing search results (see body.search-active below) */
+.app-topbar-back-btn {
+	display: none;
+	pointer-events: auto;
+	flex-shrink: 0;
+	width: 44px;
+	height: 44px;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: var(--surface-2);
+	color: #fff;
+	cursor: pointer;
+}
+
+.app-topbar-back-btn:hover {
+	background: var(--surface-1);
+}
+
+body.search-active .app-topbar-back-btn {
+	display: flex;
+}
+
+/* Scoped with .app-topbar so it outranks the later `.search-wrapper { width: 100% }` rule
+   (same specificity, defined further down, which is why the bar used to span full width). */
+.app-topbar .app-topbar-search-wrapper {
+	pointer-events: auto;
+	width: 85%;
+	position: relative;
+}
+
+/* Desktop: half the viewport width */
+@media (min-width: 769px) {
+	.app-topbar .app-topbar-search-wrapper {
+		width: 50%;
+	}
+}
+
+.app-topbar-search-wrapper .search-bar {
+	margin: 0;
+	width: 100%;
+	padding: 11px 16px;
+}
+
+.app-topbar-search-wrapper .search-bar__input {
+	text-align: left;
+	font-size: 0.9rem;
+}
+
+body:not(.tabs-active) .app-topbar {
+	display: none;
+}
+
+/* Search results keep the topbar visible (with its back button) instead of the
+   footer-nav + separate floating back button used by the other detail pages. */
+body.search-active .app-topbar {
+	display: flex !important;
+}
+
+/* …which means that page needs room for the floating bar, like the tab panels have. */
+body.search-active .content-grid {
+	padding-top: 92px;
+}
+
+@media (max-width: 480px) {
+	.app-topbar {
+		padding: 10px 12px;
+	}
+
+	.app-topbar .app-topbar-search-wrapper {
+		width: 90%;
+	}
+
+	.app-topbar-search-wrapper .search-bar {
+		padding: 10px 14px;
+	}
+}
 
 .content-grid {
 	display: grid;
@@ -218,7 +425,6 @@ input {
 	margin: 0 0 20px 0;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 	font-weight: 700;
 }
 
@@ -260,7 +466,7 @@ input {
 	min-height: 150px !important;
 	height: auto !important;
 	max-height: none !important;
-	background: rgba(255, 255, 255, 0.03) !important;
+	background: var(--surface-1) !important;
 	border-radius: 16px !important;
 	overflow: hidden !important;
 	border: 1px solid rgba(255, 255, 255, 0.07) !important;
@@ -273,8 +479,7 @@ input {
 .media-card-horizontal:hover {
 	transform: translateY(-2px);
 	border-color: rgba(255, 183, 3, 0.4) !important;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 183, 3, 0.1);
-	background: rgba(255, 255, 255, 0.05) !important;
+	background: var(--surface-2) !important;
 }
 
 .media-card-horizontal .card-backdrop {
@@ -285,7 +490,7 @@ input {
 	height: 100%;
 	background-size: cover;
 	background-position: center 25%;
-	filter: blur(2px) brightness(0.35);
+	filter: brightness(0.32);
 	opacity: 0.5;
 	z-index: 1;
 	transition: opacity 0.3s ease, filter 0.3s ease;
@@ -293,7 +498,7 @@ input {
 
 .media-card-horizontal:hover .card-backdrop {
 	opacity: 0.65;
-	filter: blur(1px) brightness(0.4);
+	filter: brightness(0.4);
 }
 
 .media-card-horizontal .card-overlay {
@@ -315,7 +520,6 @@ input {
 	margin: 16px 0 16px 14px !important;
 	border-radius: 10px;
 	overflow: hidden;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	align-self: center !important;
 }
@@ -548,15 +752,13 @@ input {
 	overflow: hidden;
 	position: relative;
 	scroll-snap-align: start;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 	transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
 	cursor: pointer;
 	background: var(--bg-panel);
 }
 
 .media-card:hover {
-	transform: translateY(-10px) scale(1.03);
-	box-shadow: 0 20px 40px rgba(34, 211, 238, 0.3), 0 0 20px rgba(255, 122, 224, 0.2);
+	transform: translateY(-2px);
 }
 
 .media-card img {
@@ -584,7 +786,6 @@ input {
 	opacity: 0;
 	transform: translateY(15px);
 	transition: all 0.3s ease;
-	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 	line-height: 1.2;
 }
 
@@ -624,7 +825,6 @@ input {
 	background: var(--bg-panel);
 	border-radius: var(--radius-md);
 	overflow: hidden;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 	transition: transform 0.3s ease, box-shadow 0.3s ease;
 	cursor: pointer;
 	min-height: 160px;
@@ -634,7 +834,6 @@ input {
 
 .search-result-card:hover {
 	transform: translateY(-4px);
-	box-shadow: 0 15px 40px rgba(34, 211, 238, 0.2);
 }
 
 .search-result-poster {
@@ -705,28 +904,24 @@ input {
 	padding: 16px;
 	border-radius: var(--radius-lg);
 	text-decoration: none;
-	background: rgba(255, 255, 255, 0.03);
+	background: var(--surface-1);
 	border: 1px solid rgba(255, 255, 255, 0.1);
-	backdrop-filter: blur(10px);
 	transition: all 0.3s ease;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .external-link:hover {
-	transform: translateY(-5px);
+	transform: translateY(-2px);
 }
 
 .external-link.tmdb:hover {
 	background: rgba(13, 37, 63, 0.8);
 	border-color: #01b4e4;
-	box-shadow: 0 10px 25px rgba(1, 180, 228, 0.25);
 	color: #90cea1;
 }
 
 .external-link.letterboxd:hover {
 	background: rgba(20, 24, 28, 0.8);
 	border-color: #00e054;
-	box-shadow: 0 10px 25px rgba(0, 224, 84, 0.25);
 	color: #ff8000;
 }
 
@@ -734,14 +929,12 @@ input {
 	background: rgba(245, 197, 24, 0.15);
 	border-color: #f5c518;
 	color: #f5c518;
-	box-shadow: 0 10px 25px rgba(245, 197, 24, 0.2);
 }
 
 .external-link.rotten:hover {
 	background: rgba(250, 50, 10, 0.15);
 	border-color: #fa320a;
 	color: #fa320a;
-	box-shadow: 0 10px 25px rgba(250, 50, 10, 0.2);
 }
 
 body.is-scrolled .hero-header {
@@ -758,10 +951,7 @@ body.is-scrolled .hero-header__content {
 	max-width: 100vw;
 	padding: 18px 22px;
 	border-radius: 24px;
-	background: rgba(7, 11, 22, 0.45);
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
-	box-shadow: 0 18px 48px rgba(1, 6, 20, 0.5);
+	background: var(--surface-2);
 	transform: translateX(-50%);
 	text-align: left;
 	display: flex;
@@ -787,7 +977,7 @@ body.is-scrolled .search-bar {
 	width: min(100%, 520px);
 	gap: 8px;
 	flex-wrap: nowrap;
-	background: rgba(3, 7, 18, 0.65);
+	background: var(--surface-2);
 	border-color: rgba(148, 163, 184, 0.14);
 }
 
@@ -798,10 +988,6 @@ body.is-scrolled .search-bar__input {
 }
 
 
-
-body.is-scrolled .content-grid {
-	padding-top: 120px;
-}
 
 .sr-only {
 	position: absolute;
@@ -864,7 +1050,7 @@ body.is-scrolled .content-grid {
 	}
 
 	.current-backdrop-info {
-		top: 16px;
+		top: 70px;
 		right: 16px;
 	}
 
@@ -910,17 +1096,10 @@ body.is-scrolled .background-carousel .backdrop.active {
 
 .color-overlay {
 	position: fixed;
-	inset: -30%;
+	inset: 0;
 	z-index: -2;
 	pointer-events: none;
-	backdrop-filter: blur(80px) saturate(250%) brightness(1.3);
-	-webkit-backdrop-filter: blur(80px) saturate(250%) brightness(1.3);
-	background:
-		radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 45%),
-		radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-		radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.2) 0%, transparent 60%);
-	mix-blend-mode: overlay;
-	animation: colorOverlayFlow 25s infinite alternate ease-in-out;
+	background: rgba(5, 8, 16, 0.35);
 	opacity: 0;
 	transition: opacity 0.5s ease;
 }
@@ -929,27 +1108,17 @@ body.is-scrolled .color-overlay {
 	opacity: 1;
 }
 
-@keyframes colorOverlayFlow {
-	0% {
-		transform: scale(1) translate(0, 0) rotate(0deg);
-	}
-
-	33% {
-		transform: scale(1.1) translate(3%, 4%) rotate(2deg);
-	}
-
-	66% {
-		transform: scale(1.15) translate(-2%, 2%) rotate(-1deg);
-	}
-
-	100% {
-		transform: scale(1.05) translate(2%, -3%) rotate(1deg);
-	}
+/* Darken/opacify the ambient backdrop behind Películas & Series / Trailers / Noticias so text
+   stays readable over the movie image — Inicio keeps the clear, vivid background. */
+body.tabs-active:not([data-active-tab="home"]) .color-overlay {
+	opacity: 1;
+	background: rgba(5, 8, 16, 0.72);
+	transition: opacity 0.3s ease, background 0.3s ease;
 }
 
 .current-backdrop-info {
 	position: fixed;
-	top: 32px;
+	top: 86px;
 	right: 32px;
 	z-index: 2000;
 	/* Ensure it is clickable over the header */
@@ -983,7 +1152,6 @@ body.is-scrolled .color-overlay {
 .current-backdrop-info .title {
 	font-size: 1.25rem;
 	color: #fff;
-	text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
 	font-weight: 500;
 	max-width: 300px;
 	word-wrap: break-word;
@@ -1005,20 +1173,7 @@ body.is-scrolled .backdrop-title-row {
 	display: flex;
 	flex-direction: column;
 	gap: 48px;
-	animation: fadeIn 0.5s ease;
 	grid-column: span 12;
-}
-
-@keyframes fadeIn {
-	from {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
 }
 
 .movie-header {
@@ -1038,7 +1193,6 @@ body.is-scrolled .backdrop-title-row {
 .movie-poster {
 	width: clamp(240px, 30vw, 360px);
 	border-radius: var(--radius-lg);
-	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
 	flex-shrink: 0;
 }
 
@@ -1053,7 +1207,6 @@ body.is-scrolled .backdrop-title-row {
 	margin: 0;
 	color: #fff;
 	line-height: 1.1;
-	text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	max-width: 100%;
@@ -1079,7 +1232,6 @@ body.is-scrolled .backdrop-title-row {
 	background: rgba(255, 255, 255, 0.1);
 	padding: 4px 12px;
 	border-radius: 99px;
-	backdrop-filter: blur(10px);
 }
 
 .movie-overview {
@@ -1219,7 +1371,7 @@ body.is-scrolled .backdrop-title-row {
 }
 
 .link-btn:hover {
-	transform: translateY(-3px) scale(1.05);
+	transform: translateY(-2px);
 }
 
 .link-btn.letterboxd {
@@ -1228,7 +1380,6 @@ body.is-scrolled .backdrop-title-row {
 }
 
 .link-btn.letterboxd:hover {
-	box-shadow: 0 8px 20px rgba(0, 224, 84, 0.2);
 	background: #1d2328;
 }
 
@@ -1238,7 +1389,6 @@ body.is-scrolled .backdrop-title-row {
 }
 
 .link-btn.imdb:hover {
-	box-shadow: 0 8px 20px rgba(245, 197, 24, 0.2);
 	background: #111;
 }
 
@@ -1248,7 +1398,6 @@ body.is-scrolled .backdrop-title-row {
 }
 
 .link-btn.tmdb-link:hover {
-	box-shadow: 0 8px 20px rgba(144, 206, 161, 0.2);
 	background: #163659;
 }
 
@@ -1268,7 +1417,7 @@ body.is-scrolled .backdrop-title-row {
 
 .fav-btn:hover {
 	background: rgba(255, 255, 255, 0.2);
-	transform: translateY(-3px) scale(1.05);
+	transform: translateY(-2px);
 }
 
 .fav-btn.active {
@@ -1291,7 +1440,6 @@ body.is-scrolled .backdrop-title-row {
 .fav-drag-item.dragging {
 	opacity: 0.6;
 	transform: scale(1.2);
-	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 	border-color: #ffb703 !important;
 	z-index: 100;
 	cursor: grabbing;
@@ -1349,7 +1497,6 @@ body.is-scrolled .backdrop-title-row {
 	/* 16:9 Aspect Ratio */
 	border-radius: var(--radius-lg);
 	overflow: hidden;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 	background: #000;
 }
 
@@ -1383,7 +1530,6 @@ body.is-scrolled .backdrop-title-row {
 	align-items: center;
 	justify-content: center;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	backdrop-filter: blur(8px);
 }
 
 .view-backdrop-btn svg {
@@ -1395,7 +1541,6 @@ body.is-scrolled .backdrop-title-row {
 	background: rgba(255, 255, 255, 0.2);
 	transform: translateY(-2px);
 	border-color: rgba(255, 255, 255, 0.4);
-	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 .settings-backdrop-btn:hover {
@@ -1403,7 +1548,6 @@ body.is-scrolled .backdrop-title-row {
 	background: rgba(255, 255, 255, 0.2);
 	transform: translateY(-2px);
 	border-color: rgba(255, 255, 255, 0.4);
-	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 body.is-scrolled .view-backdrop-btn,
@@ -1427,43 +1571,27 @@ body.backdrop-view-mode .settings-menu {
 
 .settings-menu {
 	position: fixed;
-	top: calc(32px + 44px + 8px); /* backdrop-info top + buttons height + gap */
+	top: calc(86px + 48px + 8px + 48px + 8px); /* backdrop-info top + (eye + settings buttons, each ~48px) + gaps */
 	right: 32px;
 	margin-top: 0;
-	background: var(--search-bg, rgba(10, 16, 32, 0.75));
+	background: var(--surface-2);
 	border: 1px solid rgba(255, 255, 255, 0.15);
 	border-radius: 16px;
 	padding: 20px;
 	display: none;
 	flex-direction: column;
 	gap: 12px;
-	backdrop-filter: blur(24px);
-	-webkit-backdrop-filter: blur(24px);
 	z-index: 2500;
 	text-align: left;
 	width: min(100vw - 32px, 340px);
 	max-height: calc(100vh - 32px - 44px - 8px - 16px); /* stays inside viewport */
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 	transition: background 0.3s ease;
-}
-
-@keyframes slideDownMenu {
-	from {
-		opacity: 0;
-		transform: translateY(-10px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
 }
 
 .settings-menu.active {
 	display: flex;
-	animation: slideDownMenu 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .settings-action-btn {
@@ -1486,7 +1614,6 @@ body.backdrop-view-mode .settings-menu {
 
 .settings-action-btn:hover {
 	background: rgba(255, 183, 3, 0.2);
-	box-shadow: 0 4px 12px rgba(255, 183, 3, 0.15);
 }
 
 .settings-action-btn:active {
@@ -1541,7 +1668,6 @@ body.backdrop-view-mode .settings-menu {
 .segmented-control .control-item:has(input[type="radio"]:checked) {
 	background: rgba(255, 255, 255, 0.16);
 	color: #fff;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 	border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -1549,6 +1675,43 @@ body.backdrop-view-mode main {
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.3s ease;
+}
+
+/* PostCredits wordmark in the fullscreen backdrop view */
+.fullscreen-brand {
+	display: none;
+	position: fixed;
+	top: 24px;
+	left: 32px;
+	z-index: 2000;
+	font-family: 'Bodoni Moda', serif;
+	font-size: 2rem;
+	line-height: 1;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--title-color, #fff);
+	pointer-events: none;
+	column-gap: 0.3em;
+}
+
+body.backdrop-view-mode .fullscreen-brand {
+	display: flex;
+}
+
+@media (max-width: 760px) {
+	.fullscreen-brand {
+		top: 16px;
+		left: 16px;
+		font-size: 1.4rem;
+	}
+}
+
+/* Fullscreen mode can be entered from a movie/person detail page too (its own view-fullscreen
+   button lives inside <main>, which just went invisible above) — without this, there would be
+   no way left to exit, since the footer nav is also hidden in this mode. The "Now Showing"
+   widget lives outside <main>, so it stays clickable as the one universal way back. */
+body.backdrop-view-mode .current-backdrop-info {
+	display: flex !important;
 }
 
 body.backdrop-view-mode .color-overlay,
@@ -1587,7 +1750,6 @@ body.backdrop-view-mode .hero-header__title {
 	margin: 0;
 	font-size: 2rem;
 	text-align: left;
-	text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
 }
 
 body.backdrop-view-mode .view-backdrop-btn {
@@ -1657,16 +1819,13 @@ body.backdrop-view-mode .header-credits {
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
-	backdrop-filter: blur(10px);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
 .floating-action-btn:hover {
 	background: rgba(56, 189, 248, 0.2);
 	border-color: rgba(56, 189, 248, 0.5);
 	transform: translateY(-3px);
-	box-shadow: 0 8px 25px rgba(56, 189, 248, 0.25);
 }
 
 .back-to-top {
@@ -1681,13 +1840,6 @@ body.backdrop-view-mode .header-credits {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateY(0);
-}
-
-@keyframes delayFadeIn {
-	to {
-		opacity: 1;
-		pointer-events: auto;
-	}
 }
 
 .go-back-btn {
@@ -1708,22 +1860,14 @@ body.backdrop-view-mode .header-credits {
 	font-size: 0;
 	cursor: pointer;
 	transition: background 0.2s, transform 0.2s;
-	backdrop-filter: blur(12px);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-	opacity: 0;
-	pointer-events: none;
-}
-
-body.is-scrolled .go-back-btn,
-body.backdrop-view-mode .go-back-btn {
-	animation: delayFadeIn 0.5s ease 0.5s forwards;
+	opacity: 1;
+	pointer-events: auto;
 }
 
 .go-back-btn:hover {
 	background: rgba(56, 189, 248, 0.25);
 	border-color: rgba(56, 189, 248, 0.5);
 	transform: translateY(-2px);
-	box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3);
 }
 
 @media (max-width: 760px) {
@@ -1781,7 +1925,6 @@ body.backdrop-view-mode .go-back-btn {
 	letter-spacing: 0.12em;
 	margin: 0;
 	text-align: center;
-	text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
 	font-family: serif;
 }
 
@@ -1804,7 +1947,6 @@ body.backdrop-view-mode .go-back-btn {
 .cinematic-poster {
 	width: 160px;
 	border-radius: 12px;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 	flex-shrink: 0;
 }
 
@@ -1868,7 +2010,6 @@ body.backdrop-view-mode .go-back-btn {
 	fill: none;
 	stroke-width: 2.5;
 	stroke-linecap: round;
-	animation: progress 1s ease-out forwards;
 }
 
 .circular-chart.yellow .circle {
@@ -2005,7 +2146,6 @@ body.backdrop-view-mode .go-back-btn {
 	left: auto !important;
 	z-index: 1 !important;
 	margin: 0 auto !important;
-	box-shadow: none !important;
 	opacity: 1 !important;
 	pointer-events: auto !important;
 }
@@ -2034,14 +2174,12 @@ body.backdrop-view-mode .go-back-btn {
 	top: calc(100% + 8px);
 	left: 0;
 	right: 0;
-	background: rgba(20, 25, 35, 0.95);
-	backdrop-filter: blur(16px);
+	background: var(--surface-2);
 	border: 1px solid rgba(255, 255, 255, 0.15);
 	border-radius: 12px;
 	padding: 8px 0;
 	z-index: 1000;
 	display: none;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 	max-height: 250px;
 	overflow-y: auto;
 	text-align: left;
@@ -2049,19 +2187,6 @@ body.backdrop-view-mode .go-back-btn {
 
 .search-history-dropdown.active {
 	display: block;
-	animation: slideDown 0.2s ease-out forwards;
-}
-
-@keyframes slideDown {
-	from {
-		opacity: 0;
-		transform: translateY(-10px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
 }
 
 .history-item-row {
@@ -2157,7 +2282,6 @@ body.backdrop-view-mode .go-back-btn {
 	text-align: center;
 	font-family: 'Impact', sans-serif;
 	color: #ffb703;
-	text-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
 	text-transform: uppercase;
 	line-height: 1;
 	z-index: 2;
@@ -2308,7 +2432,6 @@ body.backdrop-view-mode .go-back-btn {
 	border-radius: 12px;
 	overflow: hidden;
 	cursor: pointer;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 	border: 1px solid rgba(255, 255, 255, 0.05);
 	background: #0c0f17;
 	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease, box-shadow 0.3s ease;
@@ -2317,7 +2440,6 @@ body.backdrop-view-mode .go-back-btn {
 .media-capture-card:hover {
 	transform: scale(1.03);
 	border-color: rgba(255, 183, 3, 0.4);
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 183, 3, 0.15);
 }
 
 .media-capture-card img {
@@ -2545,7 +2667,6 @@ body.backdrop-view-mode .go-back-btn {
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.3s;
-	backdrop-filter: blur(10px);
 }
 
 .media-lightbox.active {
@@ -2585,7 +2706,6 @@ body.backdrop-view-mode .go-back-btn {
 	height: auto;
 	width: auto;
 	border-radius: 8px;
-	box-shadow: 0 0 35px rgba(0, 0, 0, 0.95);
 	object-fit: contain;
 }
 
@@ -2594,7 +2714,6 @@ body.backdrop-view-mode .go-back-btn {
 	max-height: 80vh;
 	aspect-ratio: 16/9;
 	border-radius: 8px;
-	box-shadow: 0 0 35px rgba(0, 0, 0, 0.95);
 }
 
 .lightbox-details {
@@ -2604,14 +2723,12 @@ body.backdrop-view-mode .go-back-btn {
 	display: flex;
 	flex-direction: column;
 	gap: 15px;
-	background: rgba(255, 255, 255, 0.03);
+	background: var(--surface-1);
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 16px;
 	padding: 24px;
 	box-sizing: border-box;
 	text-align: left;
-	backdrop-filter: blur(5px);
-	-webkit-backdrop-filter: blur(5px);
 }
 
 .lightbox-details-title {
@@ -2708,18 +2825,9 @@ body.backdrop-view-mode .go-back-btn {
 		width: 100vw;
 		height: 100vh;
 		background: rgba(0, 0, 0, 0.5);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
 		z-index: 9998;
 		pointer-events: auto;
-		opacity: 0;
-		animation: fadeInSettingsOverlay 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-	}
-
-	@keyframes fadeInSettingsOverlay {
-		to {
-			opacity: 1;
-		}
+		opacity: 1;
 	}
 
 	.settings-menu {
@@ -2734,16 +2842,12 @@ body.backdrop-view-mode .go-back-btn {
 		border-radius: 20px 0 0 20px !important;
 		border: none !important;
 		border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
-		box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5) !important;
 		z-index: 10000 !important;
 		display: flex !important;
 		transform: translateX(100%);
 		visibility: hidden;
 		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s, background 0.3s ease !important;
-		animation: none !important;
-		background: var(--search-bg, rgba(10, 16, 32, 0.75)) !important;
-		backdrop-filter: blur(24px) !important;
-		-webkit-backdrop-filter: blur(24px) !important;
+		background: var(--surface-2) !important;
 		padding: 64px 20px 24px 20px !important; /* Extra top padding to clear status bars/notches */
 		box-sizing: border-box !important;
 	}
@@ -2752,7 +2856,6 @@ body.backdrop-view-mode .go-back-btn {
 		display: flex !important;
 		transform: translateX(0) !important;
 		visibility: visible !important;
-		animation: none !important;
 	}
 
 	.settings-close-btn {
@@ -2836,7 +2939,6 @@ body.backdrop-view-mode .go-back-btn {
 	text-transform: uppercase;
 	line-height: 1.1;
 	letter-spacing: -0.5px;
-	text-shadow: 0 4px 20px rgba(0,0,0,0.6);
 }
 
 .hero-rating-wrapper {
@@ -2885,7 +2987,6 @@ body.backdrop-view-mode .go-back-btn {
 	color: rgba(255, 255, 255, 0.8);
 	max-width: 680px;
 	margin: 0;
-	text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 .hero-watch-providers {
@@ -2961,7 +3062,6 @@ body.backdrop-view-mode .go-back-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 	z-index: 100;
 	border: none;
 	cursor: pointer;
@@ -2971,6 +3071,18 @@ body.backdrop-view-mode .go-back-btn {
 .movie-details-container .go-back-btn:hover {
 	transform: scale(1.05);
 	background: #f0f0f0 !important;
+}
+
+/* Fullscreen-view toggle — same pill as go-back-btn, mirrored to the top-right corner */
+.movie-details-container .view-fullscreen-btn {
+	left: auto;
+	right: 30px;
+}
+
+@media (max-width: 768px) {
+	.movie-details-container .view-fullscreen-btn {
+		right: 20px;
+	}
 }
 
 .movie-details-container .go-back-btn svg {
@@ -3075,7 +3187,6 @@ body.backdrop-view-mode .go-back-btn {
 	overflow: hidden;
 	margin-bottom: 12px;
 	border: 2px solid rgba(255, 255, 255, 0.1);
-	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 	background: #0f121d;
 	transition: border-color 0.2s ease, transform 0.2s ease;
 }
@@ -3157,13 +3268,11 @@ body.backdrop-view-mode .go-back-btn {
 	border-radius: 16px;
 	overflow: hidden;
 	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease, box-shadow 0.3s ease;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .news-card-home:hover {
-	transform: translateY(-6px);
+	transform: translateY(-2px);
 	border-color: rgba(255, 183, 3, 0.3);
-	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 15px rgba(255, 183, 3, 0.08);
 	background: rgba(255, 255, 255, 0.04);
 }
 
@@ -3277,14 +3386,12 @@ body.backdrop-view-mode .go-back-btn {
 	overflow: hidden;
 	cursor: pointer;
 	border: 1px solid rgba(255, 255, 255, 0.05);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
 }
 
 .trailer-card:hover {
-	transform: translateY(-6px);
+	transform: translateY(-2px);
 	border-color: rgba(255, 183, 3, 0.4);
-	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 183, 3, 0.1);
 }
 
 .trailer-card img {
@@ -3326,7 +3433,6 @@ body.backdrop-view-mode .go-back-btn {
 	align-items: center;
 	justify-content: center;
 	color: #000;
-	box-shadow: 0 4px 15px rgba(255, 183, 3, 0.4);
 	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
 	z-index: 3;
 }
@@ -3347,7 +3453,6 @@ body.backdrop-view-mode .go-back-btn {
 	font-weight: 800;
 	color: #fff;
 	margin: 0 0 4px 0;
-	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -3447,7 +3552,6 @@ body.backdrop-view-mode .go-back-btn {
 
 .provider-logo-link:hover {
 	transform: scale(1.15) translateY(-2px);
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
 .provider-logo-link:hover .provider-logo {
@@ -3459,7 +3563,6 @@ body.backdrop-view-mode .go-back-btn {
 	height: 34px;
 	border-radius: 10px;
 	object-fit: cover;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 	transition: border-color 0.25s;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	display: block;
@@ -3476,9 +3579,7 @@ body.backdrop-view-mode .go-back-btn {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(0, 0, 0, 0.2);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
+	background: rgba(0, 0, 0, 0.55);
 	z-index: 3000;
 	display: none;
 	align-items: center;
@@ -3499,9 +3600,7 @@ html.roulette-active {
 }
 
 .roulette-modal-content {
-	background: var(--search-bg, rgba(10, 16, 32, 0.75));
-	backdrop-filter: blur(20px);
-	-webkit-backdrop-filter: blur(20px);
+	background: var(--surface-2);
 	border: 1px solid rgba(255, 255, 255, 0.15);
 	border-radius: 24px;
 	width: 90%;
@@ -3509,7 +3608,6 @@ html.roulette-active {
 	padding: 40px;
 	box-sizing: border-box;
 	position: relative;
-	box-shadow: 0 20px 60px rgba(0,0,0,0.6);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -3599,7 +3697,6 @@ html.roulette-active {
 	height: 100%;
 	background: var(--accent);
 	z-index: 10;
-	box-shadow: 0 0 10px var(--accent);
 }
 
 .roulette-pointer::before {
@@ -3665,20 +3762,17 @@ html.roulette-active {
 	font-weight: 800;
 	letter-spacing: 1px;
 	cursor: pointer;
-	box-shadow: 0 8px 20px rgba(255, 183, 3, 0.3);
 	transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 
 .roulette-spin-btn:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 12px 25px rgba(255, 183, 3, 0.4);
 }
 
 .roulette-spin-btn:disabled {
 	background: rgba(255, 255, 255, 0.1);
 	color: rgba(255, 255, 255, 0.3);
 	cursor: not-allowed;
-	box-shadow: none;
 	transform: none;
 }
 
@@ -3693,7 +3787,6 @@ html.roulette-active {
 	display: none;
 	gap: 20px;
 	align-items: center;
-	animation: slideUpFade 0.5s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
 }
 
 .roulette-winner-card.active {
@@ -3705,7 +3798,6 @@ html.roulette-active {
 	height: 135px;
 	border-radius: 8px;
 	overflow: hidden;
-	box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 	flex-shrink: 0;
 }
 
@@ -3768,17 +3860,6 @@ html.roulette-active {
 	border-color: var(--accent);
 }
 
-@keyframes slideUpFade {
-	from {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
 /* --- Actor Drawer --- */
 .actor-drawer {
 	position: fixed;
@@ -3787,12 +3868,9 @@ html.roulette-active {
 	width: 420px;
 	max-width: 100%;
 	height: 100%;
-	background: rgba(8, 12, 24, 0.95);
-	backdrop-filter: blur(20px);
-	-webkit-backdrop-filter: blur(20px);
+	background: rgba(8, 12, 24, 0.97);
 	border-left: 1px solid rgba(255, 255, 255, 0.08);
-	box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
-	z-index: 1200;
+	z-index: 2600;
 	transition: right 0.4s cubic-bezier(0.15, 0.85, 0.35, 1);
 	box-sizing: border-box;
 }
@@ -3843,7 +3921,6 @@ html.roulette-active {
 	border-radius: 50%;
 	object-fit: cover;
 	border: 3px solid rgba(255, 255, 255, 0.1);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 	margin-bottom: 16px;
 	transition: border-color 0.3s;
 }
@@ -3922,7 +3999,6 @@ html.roulette-active {
 	height: 135px;
 	border-radius: 8px;
 	object-fit: cover;
-	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 	margin-bottom: 6px;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -3946,9 +4022,7 @@ html.roulette-active {
 	right: 0;
 	bottom: 0;
 	background: rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(4px);
-	-webkit-backdrop-filter: blur(4px);
-	z-index: 1150;
+	z-index: 2550;
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.4s ease;
@@ -3959,33 +4033,9 @@ html.roulette-active {
 	pointer-events: auto;
 }
 
-/* --- Ambient Glow --- */
+/* Ambient glow blob removed — flat style */
 .ambient-glow-bg {
-	position: absolute;
-	top: 5%;
-	right: 5%;
-	width: 500px;
-	height: 500px;
-	background: var(--ambient-gradient, radial-gradient(circle, rgba(255, 183, 3, 0.25) 0%, transparent 70%));
-	z-index: 2;
-	pointer-events: none;
-	filter: blur(80px);
-	mix-blend-mode: screen;
-	opacity: 0.75;
-	transition: background 1s ease, opacity 1s ease;
-	animation: floatAmbient 16s ease-in-out infinite alternate;
-}
-
-@keyframes floatAmbient {
-	0% {
-		transform: translate(0, 0) scale(1);
-	}
-	50% {
-		transform: translate(-40px, 20px) scale(1.1);
-	}
-	100% {
-		transform: translate(20px, -30px) scale(0.95);
-	}
+	display: none;
 }
 
 /* --- Actor Timeline --- */
@@ -4030,13 +4080,10 @@ html.roulette-active {
 .actor-timeline-tooltip {
 	display: flex;
 	gap: 12px;
-	background: rgba(8, 12, 24, 0.96);
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
+	background: rgba(8, 12, 24, 0.98);
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	border-radius: 12px;
 	padding: 10px;
-	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
 	width: 230px;
 	box-sizing: border-box;
 	pointer-events: none;
@@ -4044,8 +4091,7 @@ html.roulette-active {
 	position: absolute;
 	z-index: 1000;
 	transform: translate(-50%, -100%) scale(0.92);
-	transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
-	box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+	transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 .actor-timeline-tooltip.active {
@@ -4071,7 +4117,6 @@ html.roulette-active {
 	height: 72px;
 	border-radius: 6px;
 	object-fit: cover;
-	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	flex-shrink: 0;
 }
@@ -4152,7 +4197,7 @@ html.theme-cyberpunk {
 
 /* Trivia Button inside Details Link Row */
 .movie-links-row-new .trivia-btn {
-	background: linear-gradient(135deg, rgba(255, 183, 3, 0.12) 0%, rgba(255, 183, 3, 0.04) 100%);
+	background: rgba(255, 183, 3, 0.1);
 	border: 1px solid rgba(255, 183, 3, 0.25);
 	border-radius: 12px;
 	padding: 10px 16px;
@@ -4170,9 +4215,8 @@ html.theme-cyberpunk {
 }
 
 .movie-links-row-new .trivia-btn:hover {
-	background: linear-gradient(135deg, rgba(255, 183, 3, 0.22) 0%, rgba(255, 183, 3, 0.08) 100%);
+	background: rgba(255, 183, 3, 0.18);
 	border-color: rgba(255, 183, 3, 0.55);
-	box-shadow: 0 0 12px rgba(255, 183, 3, 0.25);
 	transform: translateY(-2px);
 	color: #fff;
 }
@@ -4184,9 +4228,7 @@ html.theme-cyberpunk {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(0, 0, 0, 0.7);
-	backdrop-filter: blur(15px);
-	-webkit-backdrop-filter: blur(15px);
+	background: rgba(0, 0, 0, 0.75);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -4208,15 +4250,8 @@ html.theme-cyberpunk {
 	width: 480px;
 	max-width: 90%;
 	padding: 30px;
-	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
 	position: relative;
 	box-sizing: border-box;
-	animation: modalIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes modalIn {
-	from { transform: scale(0.9) translateY(20px); opacity: 0; }
-	to { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .trivia-close-btn {
@@ -4421,4 +4456,1209 @@ html.theme-cyberpunk {
 /* Hide Cine-Roulette button when viewing movie/series details */
 body:has(.cinematic-view) #roulette-backdrop-btn {
 	display: none !important;
+}
+
+/* =========================================================================
+   Light polish — subtle text treatment, soft translucency, short entrances.
+   Deliberately restrained: no neon glows, no loops, no overshoot easing.
+   ========================================================================= */
+
+:root {
+	--surface-1-soft: rgba(18, 20, 29, 0.84);
+	--surface-2-soft: rgba(27, 30, 41, 0.86);
+}
+
+@keyframes pc-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes pc-fade {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+/* --- Title: reads over any backdrop without neon --- */
+.hero-header__title {
+	text-shadow: 0 2px 28px rgba(0, 0, 0, 0.6);
+	animation: pc-rise 560ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+.hero-header__title span {
+	display: inline-block;
+	animation: pc-rise 620ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+.hero-header__title span:nth-child(2) {
+	animation-delay: 90ms;
+}
+
+.fullscreen-brand,
+.current-backdrop-info .title,
+.current-backdrop-info .label {
+	text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
+}
+
+/* --- Section headings: legible over photography, with a small flat accent --- */
+.section-title {
+	position: relative;
+	padding-bottom: 10px;
+	text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5);
+	animation: pc-rise 340ms ease-out both;
+}
+
+.section-title::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 40px;
+	height: 2px;
+	background: var(--title-color, #fff);
+	opacity: 0.7;
+}
+
+/* --- Cards fade up as they render, with a short stagger --- */
+.media-card-horizontal,
+.media-card,
+.trailer-card,
+.news-card-home,
+.search-result-card {
+	animation: pc-rise 320ms ease-out both;
+}
+
+.media-card-horizontal:nth-child(2),
+.media-card:nth-child(2),
+.trailer-card:nth-child(2),
+.news-card-home:nth-child(2),
+.search-result-card:nth-child(2) {
+	animation-delay: 45ms;
+}
+
+.media-card-horizontal:nth-child(3),
+.media-card:nth-child(3),
+.trailer-card:nth-child(3),
+.news-card-home:nth-child(3),
+.search-result-card:nth-child(3) {
+	animation-delay: 90ms;
+}
+
+.media-card-horizontal:nth-child(4),
+.media-card:nth-child(4),
+.trailer-card:nth-child(4),
+.news-card-home:nth-child(4),
+.search-result-card:nth-child(4) {
+	animation-delay: 135ms;
+}
+
+.media-card-horizontal:nth-child(n+5),
+.media-card:nth-child(n+5),
+.trailer-card:nth-child(n+5),
+.news-card-home:nth-child(n+5),
+.search-result-card:nth-child(n+5) {
+	animation-delay: 180ms;
+}
+
+/* --- Detail views and modals: plain fade, no slide --- */
+.movie-details-container,
+.roulette-modal-content,
+.trivia-modal-content {
+	animation: pc-fade 260ms ease-out both;
+}
+
+/* --- Light translucency on floating chrome and cards --- */
+.app-topbar .search-bar,
+.app-topbar-back-btn {
+	background: var(--surface-2-soft);
+}
+
+.tab-footer-nav {
+	background: var(--surface-2-soft);
+}
+
+.media-card-horizontal {
+	background: var(--surface-1-soft) !important;
+}
+
+.search-result-card {
+	background: rgba(10, 16, 32, 0.82);
+}
+
+.settings-menu {
+	background: var(--surface-2-soft);
+}
+
+/* --- Small text interactions --- */
+.media-card-horizontal .card-title {
+	transition: color 0.2s ease;
+}
+
+.media-card-horizontal:hover .card-title {
+	color: var(--title-color, #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.hero-header__title,
+	.hero-header__title span,
+	.section-title,
+	.media-card-horizontal,
+	.media-card,
+	.trailer-card,
+	.news-card-home,
+	.search-result-card,
+	.movie-details-container,
+	.roulette-modal-content,
+	.trivia-modal-content {
+		animation: none;
+	}
+}
+
+
+/* =========================================================================
+   Poster-card layout for Películas & Series (style only — same markup/JS).
+   Poster on top, compact info block, rating strip at the bottom.
+   Declared last so it outranks the older horizontal-card rules.
+   ========================================================================= */
+
+#now-playing-list,
+#trending-movies-list,
+#trending-tv-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+	gap: 16px;
+	padding-bottom: 24px;
+}
+
+.media-card-horizontal {
+	flex-direction: column !important;
+	align-items: stretch !important;
+	min-height: 0 !important;
+	border-radius: 14px !important;
+	background: var(--surface-1-soft) !important;
+	border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* The blurred backdrop bleed belongs to the old horizontal card */
+.media-card-horizontal .card-backdrop,
+.media-card-horizontal .card-overlay {
+	display: none !important;
+}
+
+.media-card-horizontal .card-poster-wrapper {
+	width: 100% !important;
+	height: auto !important;
+	aspect-ratio: 2 / 3;
+	margin: 0 !important;
+	border: none;
+	border-radius: 0;
+	align-self: stretch !important;
+}
+
+.media-card-horizontal .card-content {
+	padding: 12px 12px 10px !important;
+	justify-content: flex-start !important;
+	gap: 5px !important;
+}
+
+.media-card-horizontal .card-title {
+	font-size: 0.95rem;
+	white-space: normal;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: unset;
+}
+
+.media-card-horizontal .card-meta-line {
+	font-size: 0.72rem;
+}
+
+.media-card-horizontal .card-overview {
+	font-size: 0.72rem;
+	-webkit-line-clamp: 2;
+	color: rgba(255, 255, 255, 0.55);
+}
+
+.media-card-horizontal .genre-badge {
+	font-size: 0.62rem;
+	padding: 1px 8px;
+}
+
+/* Bottom strip: small rating gauge + source, like the reference's footer row */
+.media-card-horizontal .card-rating-wrapper {
+	flex-direction: row !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	gap: 8px;
+	width: 100% !important;
+	margin: 0 !important;
+	padding: 8px 12px;
+	border-top: 1px solid rgba(255, 255, 255, 0.07);
+	box-sizing: border-box;
+	align-self: stretch !important;
+}
+
+.media-card-horizontal .rating-circle-container {
+	width: 30px;
+	height: 30px;
+}
+
+.media-card-horizontal .rating-number {
+	font-size: 0.66rem;
+}
+
+.media-card-horizontal .rating-source {
+	margin-top: 0;
+	font-size: 0.6rem;
+}
+
+@media (max-width: 480px) {
+
+	#now-playing-list,
+	#trending-movies-list,
+	#trending-tv-list {
+		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		gap: 12px;
+	}
+
+	.media-card-horizontal .card-poster-wrapper {
+		width: 100% !important;
+		height: auto !important;
+		margin: 0 !important;
+	}
+
+	.media-card-horizontal .card-content {
+		padding: 10px 10px 8px !important;
+	}
+
+	.media-card-horizontal .card-rating-wrapper {
+		width: 100% !important;
+		margin: 0 !important;
+		padding: 7px 10px;
+	}
+
+	.media-card-horizontal .rating-circle-container {
+		width: 28px;
+		height: 28px;
+	}
+}
+
+
+/* =========================================================================
+   Loading skeletons (news / trailers)
+   ========================================================================= */
+
+@keyframes pc-skeleton {
+	from {
+		opacity: 0.45;
+	}
+
+	to {
+		opacity: 0.8;
+	}
+}
+
+.skeleton-card {
+	background: var(--surface-1-soft);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 14px;
+	overflow: hidden;
+}
+
+.skeleton-block {
+	background: rgba(255, 255, 255, 0.07);
+	border-radius: 6px;
+	animation: pc-skeleton 900ms ease-in-out infinite alternate;
+}
+
+.skeleton-card__media {
+	width: 100%;
+	height: 168px;
+	border-radius: 0;
+}
+
+.skeleton-card--trailer .skeleton-card__media {
+	aspect-ratio: 16 / 9;
+	height: auto;
+}
+
+.skeleton-card__body {
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+}
+
+.skeleton-line {
+	height: 11px;
+}
+
+.skeleton-line--meta {
+	height: 9px;
+	width: 45%;
+}
+
+.skeleton-line--title {
+	height: 17px;
+	width: 80%;
+}
+
+.skeleton-line--short {
+	width: 60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skeleton-block {
+		animation: none;
+	}
+}
+
+/* =========================================================================
+   Richer news cards
+   ========================================================================= */
+
+.news-card-home .news-card-image {
+	position: relative;
+}
+
+.news-card-home .news-card-category {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	background: var(--surface-2);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 999px;
+	padding: 4px 10px;
+	font-size: 0.62rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--title-color, #fff);
+}
+
+.news-card-home .news-card-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.68rem;
+	color: rgba(255, 255, 255, 0.45);
+	margin-bottom: 6px;
+}
+
+.news-card-home .news-card-source {
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.75);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.news-card-home .news-card-dot {
+	opacity: 0.4;
+}
+
+.news-card-home .news-card-description {
+	font-size: 0.82rem;
+	line-height: 1.55;
+	color: rgba(255, 255, 255, 0.6);
+	display: -webkit-box;
+	-webkit-line-clamp: 5;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.news-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 10px;
+}
+
+.news-tag {
+	font-size: 0.62rem;
+	padding: 2px 9px;
+	border-radius: 999px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.news-card-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.news-card-author {
+	font-size: 0.68rem;
+	color: rgba(255, 255, 255, 0.4);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* =========================================================================
+   Richer trailer cards
+   ========================================================================= */
+
+.trailer-card {
+	display: flex;
+	flex-direction: column;
+	background: var(--surface-1-soft);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 14px;
+	overflow: hidden;
+	cursor: pointer;
+	height: auto;
+}
+
+.trailer-card-thumb {
+	position: relative;
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+}
+
+.trailer-card-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.trailer-card-type {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	background: var(--surface-2);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: var(--title-color, #fff);
+	font-size: 0.6rem;
+	font-weight: 800;
+	letter-spacing: 0.1em;
+	padding: 4px 9px;
+	border-radius: 999px;
+}
+
+.trailer-card .trailer-card-play-btn {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.55);
+	border: 1px solid rgba(255, 255, 255, 0.25);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	opacity: 0.9;
+	transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.trailer-card .trailer-card-play-btn svg {
+	width: 22px;
+	height: 22px;
+}
+
+.trailer-card:hover .trailer-card-play-btn {
+	background: var(--title-color, #e50914);
+	opacity: 1;
+}
+
+.trailer-card-body {
+	padding: 13px 14px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.trailer-card .trailer-card-title {
+	font-size: 1rem;
+	font-weight: 700;
+	color: #fff;
+	margin: 0;
+	line-height: 1.25;
+}
+
+.trailer-card .trailer-card-subtitle {
+	font-size: 0.76rem;
+	color: var(--title-color, #ffb703);
+	margin: 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 1;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.trailer-card-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.5);
+}
+
+.trailer-card-dot {
+	opacity: 0.4;
+}
+
+.trailer-card-rating {
+	color: #ffc107;
+	font-weight: 700;
+}
+
+.trailer-card-overview {
+	font-size: 0.78rem;
+	line-height: 1.5;
+	color: rgba(255, 255, 255, 0.58);
+	margin: 2px 0 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.trailer-card-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid rgba(255, 255, 255, 0.07);
+	font-size: 0.7rem;
+}
+
+.trailer-card-count {
+	color: rgba(255, 255, 255, 0.4);
+}
+
+.trailer-card-cta {
+	color: var(--title-color, #fff);
+	font-weight: 700;
+}
+
+/* =========================================================================
+   Movie / series detail sheet
+   ========================================================================= */
+
+.detail-sheet {
+	width: min(100%, 640px);
+	margin: 0 auto;
+	gap: 0;
+}
+
+.detail-sheet__bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 4px 2px 14px;
+}
+
+.detail-sheet__bar-label {
+	font-size: 0.72rem;
+	font-weight: 800;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+/* Buttons sit in the bar, not pinned to the old hero corners */
+.detail-sheet .go-back-btn {
+	position: static;
+	top: auto;
+	left: auto;
+	right: auto;
+	width: 42px;
+	height: 42px;
+	border-radius: 13px;
+	flex-shrink: 0;
+}
+
+.detail-sheet .go-back-btn svg {
+	width: 20px;
+	height: 20px;
+}
+
+.detail-sheet__poster {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 3 / 2;
+	border-radius: 18px;
+	background-size: cover;
+	background-position: center;
+	background-color: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.detail-sheet__play {
+	position: absolute;
+	right: 16px;
+	bottom: -22px;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	border: none;
+	background: #ffc107;
+	color: #14161d;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: transform 0.2s ease;
+}
+
+.detail-sheet__play:hover {
+	transform: scale(1.06);
+}
+
+.detail-sheet__body {
+	padding: 34px 2px 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.detail-sheet__title {
+	font-size: clamp(1.6rem, 4vw, 2.1rem);
+	font-weight: 800;
+	line-height: 1.15;
+	margin: 0;
+	color: #fff;
+	letter-spacing: -0.01em;
+}
+
+.detail-sheet__genres {
+	margin: 0;
+	font-size: 0.85rem;
+	color: rgba(255, 255, 255, 0.5);
+}
+
+.detail-sheet__rating {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 2px;
+}
+
+.detail-sheet__stars {
+	letter-spacing: 2px;
+	font-size: 0.95rem;
+	color: rgba(255, 255, 255, 0.22);
+}
+
+.detail-sheet__stars .is-on {
+	color: #ffc107;
+}
+
+.detail-sheet__score {
+	font-weight: 800;
+	color: #fff;
+	font-size: 0.95rem;
+}
+
+.detail-sheet__votes {
+	font-size: 0.72rem;
+	color: rgba(255, 255, 255, 0.4);
+}
+
+.detail-sheet__synopsis {
+	margin: 8px 0 0;
+	font-size: 0.92rem;
+	line-height: 1.65;
+	color: rgba(255, 255, 255, 0.62);
+	text-align: justify;
+}
+
+.detail-sheet__meta {
+	margin: 14px 0 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.detail-sheet__meta-row {
+	display: grid;
+	grid-template-columns: 92px 1fr;
+	gap: 12px;
+	align-items: baseline;
+	font-size: 0.85rem;
+}
+
+.detail-sheet__meta-row dt {
+	color: rgba(255, 255, 255, 0.42);
+	font-weight: 700;
+	font-size: 0.76rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.detail-sheet__meta-row dd {
+	margin: 0;
+	color: rgba(255, 255, 255, 0.85);
+}
+
+.detail-sheet__meta-row .clickable-person {
+	cursor: pointer;
+	transition: color 0.2s ease;
+}
+
+.detail-sheet__meta-row .clickable-person:hover {
+	color: var(--title-color, #fff);
+	text-decoration: underline;
+}
+
+.detail-sheet .hero-watch-providers {
+	margin-top: 18px;
+}
+
+.detail-sheet .movie-links-row-new {
+	margin-top: 18px;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.detail-sheet .logan-media-section,
+.detail-sheet .logan-news-section {
+	margin-top: 36px;
+}
+
+@media (max-width: 480px) {
+	.detail-sheet__poster {
+		aspect-ratio: 4 / 3;
+		border-radius: 16px;
+	}
+
+	.detail-sheet__meta-row {
+		grid-template-columns: 78px 1fr;
+		font-size: 0.8rem;
+	}
+}
+
+
+/* News cards: same flat surface as the rest, footer pinned to the bottom */
+.news-card-home {
+	background: var(--surface-1-soft);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.news-card-home .news-card-meta {
+	margin-bottom: 0;
+}
+
+.news-card-home .news-card-description {
+	flex-grow: 1;
+}
+
+.news-card-home .news-card-footer {
+	margin-top: auto;
+}
+
+
+/* =========================================================================
+   Detail sheet v2 — the content sits on the movie's own backdrop instead of
+   inside a dark panel, and the top bar floats like the rest of the chrome.
+   ========================================================================= */
+
+/* Dim the ambient backdrop while a detail page is open so text stays readable
+   directly over the photo (no card background needed). */
+body:not(.tabs-active) .color-overlay {
+	opacity: 1;
+	background: rgba(5, 8, 16, 0.7);
+}
+
+/* No more dark column: the sheet and its sections are see-through */
+.detail-sheet,
+.detail-sheet .logan-media-section,
+.detail-sheet .logan-news-section,
+.detail-sheet .logan-footer-info {
+	background: transparent;
+	border-radius: 0;
+	overflow: visible;
+}
+
+.detail-sheet {
+	padding-top: 88px;
+	align-items: stretch;
+}
+
+.detail-sheet .logan-media-section,
+.detail-sheet .logan-news-section {
+	padding: 0;
+	align-items: stretch;
+}
+
+.detail-sheet .logan-footer-info {
+	padding: 28px 0 0;
+}
+
+/* Text over photography gets a soft neutral shadow instead of a panel */
+.detail-sheet__title,
+.detail-sheet__genres,
+.detail-sheet__synopsis,
+.detail-sheet__rating,
+.detail-sheet__meta-row dt,
+.detail-sheet__meta-row dd,
+.detail-sheet .logan-media-section h4,
+.detail-sheet .logan-news-section h4 {
+	text-shadow: 0 1px 14px rgba(0, 0, 0, 0.7);
+}
+
+.detail-sheet__synopsis,
+.detail-sheet__meta-row dd {
+	color: rgba(255, 255, 255, 0.82);
+}
+
+.detail-sheet__genres {
+	color: rgba(255, 255, 255, 0.65);
+}
+
+/* --- Floating header: back · title · fullscreen --- */
+.detail-sheet__bar {
+	position: fixed;
+	top: 18px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 1600;
+	width: max-content;
+	max-width: min(92vw, 720px);
+	padding: 8px 12px;
+	gap: 12px;
+	background: var(--surface-2-soft);
+	border: 1px solid var(--border-subtle);
+	border-radius: 999px;
+}
+
+.detail-sheet__bar-label {
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: none;
+	color: #fff;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.detail-sheet .go-back-btn {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+}
+
+.detail-sheet .go-back-btn svg {
+	width: 18px;
+	height: 18px;
+}
+
+/* --- Desktop: lay the poster and the info side by side over the backdrop --- */
+@media (min-width: 900px) {
+	.detail-sheet {
+		width: min(100%, 1060px);
+		display: grid;
+		grid-template-columns: 400px minmax(0, 1fr);
+		column-gap: 40px;
+		row-gap: 0;
+		align-items: start;
+	}
+
+	.detail-sheet__poster {
+		grid-column: 1;
+		position: sticky;
+		top: 88px;
+	}
+
+	.detail-sheet__body {
+		grid-column: 2;
+		padding: 0 0 8px;
+	}
+
+	.detail-sheet .logan-media-section,
+	.detail-sheet .logan-news-section,
+	.detail-sheet .logan-footer-info {
+		grid-column: 1 / -1;
+	}
+
+	.detail-sheet__play {
+		right: -18px;
+		bottom: 18px;
+	}
+}
+
+
+/* =========================================================================
+   Detail sheet — image source + splash layout
+   ========================================================================= */
+
+/* The poster element now takes its image from custom props so each breakpoint
+   can pick the framing that crops best (landscape backdrop vs portrait poster). */
+.detail-sheet__poster {
+	background-image: var(--detail-backdrop);
+}
+
+/* Wrappers are layout-neutral on desktop */
+.detail-sheet__lead,
+.detail-sheet__rest {
+	display: contents;
+}
+
+.detail-sheet__cta-wrap {
+	display: none;
+}
+
+/* --- Mobile: full-bleed splash, content below the fold --- */
+@media (max-width: 768px) {
+
+	.detail-sheet {
+		padding-top: 0;
+		width: 100%;
+	}
+
+	/* Portrait poster fills the screen and stays put while the page scrolls */
+	.detail-sheet__poster {
+		position: fixed;
+		inset: 0;
+		width: 100%;
+		height: 100svh;
+		aspect-ratio: auto;
+		border: none;
+		border-radius: 0;
+		background-image: var(--detail-portrait);
+		background-position: center;
+		z-index: 0;
+	}
+
+	/* Scrim so white text stays readable over any still */
+	.detail-sheet__poster::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(to bottom,
+				rgba(5, 8, 16, 0.55) 0%,
+				rgba(5, 8, 16, 0.15) 28%,
+				rgba(5, 8, 16, 0.75) 72%,
+				rgba(5, 8, 16, 0.96) 100%);
+	}
+
+	/* The round play FAB belongs to the desktop card */
+	.detail-sheet__play {
+		display: none;
+	}
+
+	.detail-sheet__body {
+		position: relative;
+		z-index: 1;
+		padding: 0;
+		gap: 0;
+	}
+
+	/* First screen: title stack anchored to the bottom, centred */
+	.detail-sheet__lead {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-end;
+		min-height: 100svh;
+		padding: 0 26px 46px;
+		text-align: center;
+		gap: 10px;
+		box-sizing: border-box;
+	}
+
+	.detail-sheet__lead .detail-sheet__title {
+		font-size: clamp(1.9rem, 8vw, 2.6rem);
+		line-height: 1.12;
+		letter-spacing: -0.015em;
+	}
+
+	.detail-sheet__lead .detail-sheet__genres {
+		font-size: 0.74rem;
+		letter-spacing: 0.28em;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.72);
+		margin: 2px 0 0;
+	}
+
+	.detail-sheet__lead .detail-sheet__rating {
+		justify-content: center;
+	}
+
+	.detail-sheet__lead .detail-sheet__synopsis {
+		font-size: 0.86rem;
+		line-height: 1.55;
+		text-align: center;
+		color: rgba(255, 255, 255, 0.75);
+		margin: 4px 0 0;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.detail-sheet__cta-wrap {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		margin-top: 18px;
+		width: 100%;
+	}
+
+	.detail-sheet__cta {
+		width: min(100%, 260px);
+		padding: 14px 22px;
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.55);
+		background: transparent;
+		color: #fff;
+		font-family: inherit;
+		font-size: 0.9rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		cursor: pointer;
+		transition: background 0.2s ease, border-color 0.2s ease;
+	}
+
+	.detail-sheet__cta:hover,
+	.detail-sheet__cta:active {
+		background: rgba(255, 255, 255, 0.12);
+		border-color: #fff;
+	}
+
+	.detail-sheet__fine {
+		font-size: 0.68rem;
+		color: rgba(255, 255, 255, 0.5);
+	}
+
+	/* Second screen: normal readable page over a solid ground */
+	.detail-sheet__rest {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: 26px 18px 22px;
+		background: var(--bg);
+		border-radius: 22px 22px 0 0;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.detail-sheet .logan-media-section,
+	.detail-sheet .logan-news-section,
+	.detail-sheet .logan-footer-info {
+		position: relative;
+		z-index: 1;
+		background: var(--bg);
+		padding-left: 18px;
+		padding-right: 18px;
+	}
+
+	.detail-sheet .logan-media-section {
+		padding-top: 8px;
+	}
+
+	.detail-sheet .logan-footer-info {
+		padding-bottom: 140px;
+	}
+}
+
+
+/* =========================================================================
+   Trailer cards — undo the legacy 16:9 card ratio (it squashed the thumbnail
+   down to a sliver once the card grew a body) and give them more room.
+   ========================================================================= */
+
+.media-grid-trailers {
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 20px;
+}
+
+.trailer-card {
+	aspect-ratio: auto;
+}
+
+.trailer-card-thumb {
+	flex-shrink: 0;
+}
+
+.trailer-card-body {
+	padding: 15px 16px 14px;
+}
+
+.trailer-card .trailer-card-title {
+	font-size: 1.08rem;
+}
+
+.trailer-card-overview {
+	font-size: 0.8rem;
+	-webkit-line-clamp: 4;
+}
+
+@media (max-width: 520px) {
+	.media-grid-trailers {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
+
+/* Inline trailer player inside the lightbox */
+.lightbox-video-wrap {
+	width: 100%;
+	max-width: 1000px;
+	aspect-ratio: 16 / 9;
+	background: #000;
+	border-radius: 14px;
+	overflow: hidden;
+}
+
+.lightbox-video-wrap iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+	display: block;
+}
+
+.lightbox-yt-link {
+	display: inline-block;
+	margin-top: 14px;
+	font-size: 0.8rem;
+	font-weight: 700;
+	color: var(--title-color, #fff);
+	text-decoration: none;
+}
+
+.lightbox-yt-link:hover {
+	text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+	.lightbox-content-split {
+		flex-direction: column;
+		gap: 16px;
+		align-items: stretch;
+	}
+
+	.lightbox-video-wrap {
+		max-width: 100%;
+	}
 }

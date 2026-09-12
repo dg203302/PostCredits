@@ -1,4 +1,3 @@
-const header = document.querySelector('[data-header]');
 const searchForm = document.querySelector('[data-search-form]');
 const searchInput = document.querySelector('[data-search-input]');
 
@@ -14,13 +13,28 @@ const searchAPI = {
 
 window.PostCreditsSearch = searchAPI;
 
-const updateHeaderState = () => {
-	const isScrolled = window.scrollY > 24;
-	document.body.classList.toggle('is-scrolled', isScrolled);
-	if (header) {
-		header.dataset.state = isScrolled ? 'floating' : 'hero';
+// Inicio is now just the ambient backdrop + the "Now Showing" widget (both fixed/global) —
+// homeScrollTarget/is-scrolled tracking is kept only because a couple of legacy rules still
+// key off `body.is-scrolled`; it no longer drives a hero to compact since there isn't one.
+let homeScrollTarget = null;
+
+function updateHeaderState() {
+	const y = homeScrollTarget ? homeScrollTarget.scrollTop : window.scrollY;
+	document.body.classList.toggle('is-scrolled', y > 24);
+}
+
+function bindHomeScrollState() {
+	if (homeScrollTarget) {
+		homeScrollTarget.removeEventListener('scroll', updateHeaderState);
 	}
-};
+	homeScrollTarget = document.querySelector('.tab-panel[data-tab="home"]');
+	if (homeScrollTarget) {
+		homeScrollTarget.addEventListener('scroll', updateHeaderState, { passive: true });
+	}
+	updateHeaderState();
+}
+
+window.addEventListener('resize', updateHeaderState);
 
 if (searchForm) {
 	searchForm.addEventListener('submit', (event) => {
@@ -41,9 +55,108 @@ if (searchForm) {
 	});
 }
 
-updateHeaderState();
-window.addEventListener('scroll', updateHeaderState, { passive: true });
-window.addEventListener('resize', updateHeaderState);
+// --- Tabbed layout (Inicio / Películas & Series / Trailers / Noticias) ---
+const tabFooterNav = document.getElementById('tab-footer-nav');
+let tabIntersectionObserver = null;
+
+function setActiveTab(name, { scroll = true } = {}) {
+	const viewport = document.getElementById('tab-viewport');
+	if (!viewport) return;
+
+	document.body.dataset.activeTab = name;
+
+	if (tabFooterNav) {
+		tabFooterNav.querySelectorAll('.tab-footer-btn').forEach((btn) => {
+			btn.classList.toggle('active', btn.dataset.tab === name);
+		});
+	}
+
+	if (scroll) {
+		const panel = viewport.querySelector(`.tab-panel[data-tab="${name}"]`);
+		if (panel) {
+			viewport.scrollTo({ left: panel.offsetLeft, behavior: 'smooth' });
+		}
+	}
+}
+
+function bindTabViewport(initialTab = 'home') {
+	const viewport = document.getElementById('tab-viewport');
+	if (!viewport) return;
+
+	if (tabIntersectionObserver) {
+		tabIntersectionObserver.disconnect();
+	}
+
+	tabIntersectionObserver = new IntersectionObserver((entries) => {
+		entries.forEach((entry) => {
+			if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+				setActiveTab(entry.target.dataset.tab, { scroll: false });
+			}
+		});
+	}, { root: viewport, threshold: [0.6] });
+
+	viewport.querySelectorAll('.tab-panel').forEach((panel) => tabIntersectionObserver.observe(panel));
+
+	const targetPanel = viewport.querySelector(`.tab-panel[data-tab="${initialTab}"]`);
+	viewport.scrollTo({ left: targetPanel ? targetPanel.offsetLeft : 0, behavior: 'instant' });
+	setActiveTab(initialTab, { scroll: false });
+	bindHomeScrollState();
+}
+
+if (tabFooterNav) {
+	tabFooterNav.addEventListener('click', (e) => {
+		const btn = e.target.closest('.tab-footer-btn');
+		if (!btn || !btn.dataset.tab) return; // ignore the chat button, handled separately
+
+		// The footer nav also shows on detail pages (movie/person/search results); tapping a
+		// section there first rebuilds the tabbed home layout, then jumps to the requested tab.
+		if (!document.body.classList.contains('tabs-active')) {
+			if (typeof window.restoreHome === 'function') window.restoreHome();
+			if (btn.dataset.tab !== 'home') {
+				setActiveTab(btn.dataset.tab, { scroll: true });
+			}
+			return;
+		}
+
+		setActiveTab(btn.dataset.tab, { scroll: true });
+	});
+}
+
+function enterHomeMode() {
+	document.body.classList.add('tabs-active');
+	document.body.classList.remove('search-active');
+	const main = document.getElementById('main-content');
+	if (main) main.classList.remove('content-grid');
+}
+
+function enterDetailMode() {
+	document.body.classList.remove('tabs-active');
+	document.body.classList.remove('search-active');
+	const main = document.getElementById('main-content');
+	if (main) main.classList.add('content-grid');
+}
+
+// Search results keep the topbar (with its own back button) visible instead of the
+// footer-nav + floating back button the other detail pages use.
+let preSearchTab = 'home';
+function enterSearchMode() {
+	preSearchTab = document.body.dataset.activeTab || 'home';
+	enterDetailMode();
+	document.body.classList.add('search-active');
+}
+
+const appTopbarBackBtn = document.getElementById('app-topbar-back-btn');
+if (appTopbarBackBtn) {
+	appTopbarBackBtn.addEventListener('click', () => {
+		document.body.classList.remove('search-active');
+		restoreHome();
+		if (preSearchTab !== 'home') {
+			setActiveTab(preSearchTab, { scroll: false });
+		}
+	});
+}
+
+bindTabViewport();
 
 // --- Search History ---
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
@@ -159,30 +272,31 @@ window.openVideoLightbox = function(videoKey, title = '', overview = '', year = 
     if (!lightbox || !body || !detailsContainer) return;
 
     body.innerHTML = '';
+    // The player needs its own sized box: #lightbox-body has no fixed height, so an
+    // iframe with height:100% would collapse.
+    const wrap = document.createElement('div');
+    wrap.className = 'lightbox-video-wrap';
     const iframe = document.createElement('iframe');
-    iframe.src = `https://www.youtube-nocookie.com/embed/${videoKey}?rel=0&autoplay=1`;
+    iframe.src = `https://www.youtube-nocookie.com/embed/${videoKey}?rel=0&autoplay=1&playsinline=1`;
     iframe.setAttribute('frameborder', '0');
-    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
     iframe.setAttribute('allowfullscreen', '');
-    iframe.style.cssText = 'width:100%;height:100%;border:none;';
-    body.appendChild(iframe);
+    iframe.setAttribute('title', title || 'Trailer');
+    wrap.appendChild(iframe);
+    body.appendChild(wrap);
 
-    if (title) {
-        detailsContainer.style.display = 'flex';
-        let ratingHTML = rating ? `<span class="lightbox-details-rating">⭐ ${rating}</span>` : '';
-        detailsContainer.innerHTML = `
-            <h4 class="lightbox-details-title">${title}</h4>
-            <div class="lightbox-details-meta">
-                ${year ? `<span>${year}</span>` : ''}
-                ${year && rating ? `<span>•</span>` : ''}
-                ${ratingHTML}
-            </div>
-            ${overview ? `<p class="lightbox-details-overview">${overview}</p>` : ''}
-        `;
-    } else {
-        detailsContainer.style.display = 'none';
-        detailsContainer.innerHTML = '';
-    }
+    detailsContainer.style.display = 'flex';
+    const ratingHTML = rating ? `<span class="lightbox-details-rating">⭐ ${rating}</span>` : '';
+    detailsContainer.innerHTML = `
+        ${title ? `<h4 class="lightbox-details-title">${title}</h4>` : ''}
+        <div class="lightbox-details-meta">
+            ${year ? `<span>${year}</span>` : ''}
+            ${year && rating ? `<span>•</span>` : ''}
+            ${ratingHTML}
+        </div>
+        ${overview ? `<p class="lightbox-details-overview">${overview}</p>` : ''}
+        <a class="lightbox-yt-link" href="https://www.youtube.com/watch?v=${videoKey}" target="_blank" rel="noopener noreferrer">Ver en YouTube ↗</a>
+    `;
 
     lightbox.classList.add('active');
 };
@@ -350,7 +464,7 @@ function initCarousel() {
 			root.style.setProperty('--title-glow', `rgba(${color.r}, ${color.g}, ${color.b}, 0.7)`);
 			root.style.setProperty('--title-glow-dim', `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`);
 			root.style.setProperty('--title-glow-dimmer', `rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`);
-			root.style.setProperty('--search-bg', `rgba(${color.r}, ${color.g}, ${color.b}, 0.35)`);
+			root.style.setProperty('--search-bg', `rgba(${color.r}, ${color.g}, ${color.b}, 0.92)`);
 		}
 	};
 
@@ -413,13 +527,15 @@ async function loadMovieBackdrops(id, mediaType, defaultTitle) {
 }
 
 // Lógica del botón para ver el Backdrop
+window.toggleBackdropView = function () {
+	const isActive = document.body.classList.toggle('backdrop-view-mode');
+	document.documentElement.classList.toggle('backdrop-view-active', isActive);
+};
+
 const viewBackdropBtn = document.getElementById('view-backdrop-btn');
 
 if (viewBackdropBtn) {
-	viewBackdropBtn.addEventListener('click', () => {
-		const isActive = document.body.classList.toggle('backdrop-view-mode');
-		document.documentElement.classList.toggle('backdrop-view-active', isActive);
-	});
+	viewBackdropBtn.addEventListener('click', () => window.toggleBackdropView());
 }
 
 // Evitar desplazamiento en la página al estar en vista de fondo (backdrop-view-mode) o con el menú de configuración activo
@@ -924,16 +1040,14 @@ async function renderSection(endpoint, containerId, params = '') {
         const data = await response.json();
         
         if (data.results) {
-            const validItems = data.results.filter(item => item.poster_path || item.profile_path);
-            const initialItems = validItems.slice(0, 6);
-            const remainingItems = validItems.slice(6);
+            const validItems = data.results.filter(item => item.poster_path || item.profile_path).slice(0, 12);
 
             const isHorizontal = containerId !== 'trending-people-list';
 
-            // Parallel details fetch for initialItems
+            // Parallel details fetch for every card — no more "Show More" defer/pagination
             let detailedInitialItems = [];
             if (isHorizontal) {
-                detailedInitialItems = await Promise.all(initialItems.map(async (item) => {
+                detailedInitialItems = await Promise.all(validItems.map(async (item) => {
                     const type = item.media_type || (endpoint.includes('tv') ? 'tv' : 'movie');
                     try {
                         const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits`);
@@ -945,7 +1059,7 @@ async function renderSection(endpoint, containerId, params = '') {
                     }
                 }));
             } else {
-                detailedInitialItems = initialItems.map(item => ({ ...item, type: 'person' }));
+                detailedInitialItems = validItems.map(item => ({ ...item, type: 'person' }));
             }
 
             const generateCardHTML = (item) => {
@@ -1072,79 +1186,6 @@ async function renderSection(endpoint, containerId, params = '') {
 
             const cardsSelector = isHorizontal ? '.media-card-horizontal' : '.media-card';
             container.querySelectorAll(cardsSelector).forEach(attachListenerToCard);
-
-            if (remainingItems.length > 0) {
-                const btnHTML = `
-                    <div class="expand-btn-container">
-                        <button class="expand-section-btn show-more-btn">
-                            <span>Show More</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', btnHTML);
-                
-                const wrapper = container.querySelector('.expand-btn-container');
-                const btn = wrapper.querySelector('.show-more-btn');
-                
-                let isExpanded = false;
-                let extraCards = [];
-                
-                btn.addEventListener('click', async () => {
-                    if (!isExpanded) {
-                        btn.disabled = true;
-                        btn.innerHTML = `
-                            <span>Loading...</span>
-                            <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-                        `;
-
-                        let detailedRemaining = [];
-                        if (isHorizontal) {
-                            detailedRemaining = await Promise.all(remainingItems.map(async (item) => {
-                                const type = item.media_type || (endpoint.includes('tv') ? 'tv' : 'movie');
-                                try {
-                                    const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits`);
-                                    const details = await res.json();
-                                    return { ...item, details, type };
-                                } catch (err) {
-                                    console.error("Error fetching detailed info", err);
-                                    return { ...item, type };
-                                }
-                            }));
-                        } else {
-                            detailedRemaining = remainingItems.map(item => ({ ...item, type: 'person' }));
-                        }
-
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = detailedRemaining.map(generateCardHTML).join('');
-                        extraCards = Array.from(tempDiv.children);
-                        extraCards.forEach(card => {
-                            container.insertBefore(card, wrapper);
-                            attachListenerToCard(card);
-                        });
-                        
-                        btn.disabled = false;
-                        btn.classList.add('expanded');
-                        btn.innerHTML = `
-                            <span>Show Less</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        `;
-                        isExpanded = true;
-                    } else {
-                        extraCards.forEach(card => card.remove());
-                        extraCards = [];
-                        btn.classList.remove('expanded');
-                        btn.innerHTML = `
-                            <span>Show More</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        `;
-                        isExpanded = false;
-                        
-                        const sectionTop = container.parentElement.getBoundingClientRect().top + window.scrollY - 80;
-                        window.scrollTo({ top: sectionTop, behavior: 'smooth' });
-                    }
-                });
-            }
         }
     } catch (error) {
         console.error("Error al cargar la sección " + containerId, error);
@@ -1186,12 +1227,37 @@ const industryNewsData = [
     }
 ];
 
+// Placeholder cards shown while a section is still fetching.
+function renderSkeletons(container, count, variant) {
+    if (!container) return;
+    container.innerHTML = Array.from({ length: count }).map(() => `
+        <div class="skeleton-card skeleton-card--${variant}">
+            <div class="skeleton-block skeleton-card__media"></div>
+            <div class="skeleton-card__body">
+                <div class="skeleton-block skeleton-line skeleton-line--meta"></div>
+                <div class="skeleton-block skeleton-line skeleton-line--title"></div>
+                <div class="skeleton-block skeleton-line"></div>
+                <div class="skeleton-block skeleton-line"></div>
+                <div class="skeleton-block skeleton-line skeleton-line--short"></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function estimateReadingTime(text) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.round(words / 200));
+}
+
 async function loadIndustryNews() {
     const container = document.getElementById('industry-news-list');
     if (!container) return;
-    
+
+    container.className = "news-grid-home";
+    renderSkeletons(container, 6, 'news');
+
     let newsList = industryNewsData;
-    
+
     try {
         const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fvariety.com%2Fv%2Ffilm%2Ffeed%2F`);
         if (res.ok) {
@@ -1222,7 +1288,10 @@ async function loadIndustryNews() {
                         title: item.title,
                         description: cleanDesc,
                         image: item.thumbnail || item.enclosure?.link || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=600&auto=format&fit=crop',
-                        link: item.link
+                        link: item.link,
+                        author: item.author || '',
+                        source: feedData.feed?.title || 'Variety',
+                        tags: (item.categories || []).slice(0, 3)
                     };
                 });
             }
@@ -1231,50 +1300,47 @@ async function loadIndustryNews() {
         console.warn("Failed to fetch external news feed, falling back to local news", err);
     }
     
-    container.className = "news-grid-home collapsed";
-    container.innerHTML = newsList.map(news => `
-        <div class="news-card-home">
-            <div class="news-card-image" style="background-image: url('${news.image}')"></div>
+    container.className = "news-grid-home";
+    container.innerHTML = newsList.map(news => {
+        const tags = (news.tags || []).filter(t => t && t !== news.category);
+        const readMins = estimateReadingTime(news.description);
+        return `
+        <article class="news-card-home">
+            <div class="news-card-image" style="background-image: url('${news.image}')">
+                <span class="news-card-category">${news.category}</span>
+            </div>
             <div class="news-card-content">
                 <div class="news-card-meta">
-                    <span class="news-card-category">${news.category}</span>
+                    <span class="news-card-source">${news.source || 'PostCredits'}</span>
+                    <span class="news-card-dot">•</span>
                     <span class="news-card-date">${news.date}</span>
+                    <span class="news-card-dot">•</span>
+                    <span class="news-card-read">${readMins} min de lectura</span>
                 </div>
                 <h3 class="news-card-title">${news.title}</h3>
                 <p class="news-card-description">${news.description}</p>
-                <a href="${news.link}" target="_blank" class="news-card-readmore">Read full article →</a>
+                ${tags.length ? `<div class="news-card-tags">${tags.map(t => `<span class="news-tag">${t}</span>`).join('')}</div>` : ''}
+                <div class="news-card-footer">
+                    ${news.author ? `<span class="news-card-author">Por ${news.author}</span>` : '<span class="news-card-author"></span>'}
+                    <a href="${news.link}" target="_blank" rel="noopener noreferrer" class="news-card-readmore">Leer nota completa →</a>
+                </div>
             </div>
-        </div>
-    `).join('');
+        </article>
+    `;
+    }).join('');
 
     const nextEl = container.nextElementSibling;
     if (nextEl && nextEl.classList.contains('expand-btn-container')) {
         nextEl.remove();
-    }
-    
-    if (newsList.length > 4) {
-        const btnContainer = document.createElement('div');
-        btnContainer.className = 'expand-btn-container';
-        btnContainer.innerHTML = `
-            <button class="expand-section-btn">
-                <span>Show More</span>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-        `;
-        container.after(btnContainer);
-        
-        btnContainer.querySelector('button').addEventListener('click', (e) => {
-            const isCollapsed = container.classList.toggle('collapsed');
-            const btn = e.currentTarget;
-            btn.classList.toggle('expanded', !isCollapsed);
-            btn.querySelector('span').textContent = isCollapsed ? 'Show More' : 'Show Less';
-        });
     }
 }
 
 async function loadPopularTrailers() {
     const container = document.getElementById('popular-trailers-list');
     if (!container) return;
+
+    container.className = "media-grid-trailers";
+    renderSkeletons(container, 6, 'trailer');
 
     try {
         const lang = navigator.language || 'es-MX';
@@ -1288,12 +1354,19 @@ async function loadPopularTrailers() {
                 try {
                     const videoRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${TMDB_API_KEY}&language=en-US`);
                     const videoData = await videoRes.json();
-                    const trailer = videoData.results?.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
+                    const ytVideos = (videoData.results || []).filter(v => v.site === 'YouTube');
+                    const trailer = ytVideos.find(v => v.type === 'Trailer' || v.type === 'Teaser');
                     if (trailer) {
                         return {
                             movieTitle: movie.title,
                             trailerName: trailer.name,
                             key: trailer.key,
+                            type: trailer.type,
+                            publishedAt: trailer.published_at || '',
+                            videoCount: ytVideos.length,
+                            overview: movie.overview || '',
+                            year: (movie.release_date || '').split('-')[0],
+                            rating: movie.vote_average || 0,
                             backdrop: `https://image.tmdb.org/t/p/w780${movie.backdrop_path}`
                         };
                     }
@@ -1306,53 +1379,67 @@ async function loadPopularTrailers() {
             const validTrailers = trailers.filter(t => t !== null).slice(0, 12);
             
             if (validTrailers.length > 0) {
-                container.className = "media-grid-trailers collapsed";
+                container.className = "media-grid-trailers";
                 container.innerHTML = validTrailers.map(t => {
+                    let publishedStr = '';
+                    if (t.publishedAt) {
+                        try {
+                            publishedStr = new Date(t.publishedAt).toLocaleDateString(navigator.language || 'es-MX', {
+                                year: 'numeric', month: 'short', day: 'numeric'
+                            });
+                        } catch (e) {
+                            publishedStr = '';
+                        }
+                    }
+                    const ratingStr = t.rating > 0 ? t.rating.toFixed(1) : 'NR';
                     return `
-                        <div class="trailer-card"
+                        <article class="trailer-card"
                             data-video-key="${t.key}"
                             data-video-title="${t.movieTitle.replace(/"/g, '&quot;')}"
-                            data-video-sub="${t.trailerName.replace(/"/g, '&quot;')}">
-                            <img src="${t.backdrop}" alt="${t.movieTitle.replace(/"/g, '&quot;')}" loading="lazy">
-                            <div class="trailer-card-overlay">
+                            data-video-sub="${t.trailerName.replace(/"/g, '&quot;')}"
+                            data-video-overview="${(t.overview || '').replace(/"/g, '&quot;')}"
+                            data-video-year="${t.year || ''}"
+                            data-video-rating="${ratingStr}">
+                            <div class="trailer-card-thumb">
+                                <img src="${t.backdrop}" alt="${t.movieTitle.replace(/"/g, '&quot;')}" loading="lazy">
+                                <span class="trailer-card-type">${(t.type || 'Trailer').toUpperCase()}</span>
+                                <div class="trailer-card-play-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                            </div>
+                            <div class="trailer-card-body">
                                 <h3 class="trailer-card-title">${t.movieTitle}</h3>
                                 <p class="trailer-card-subtitle">${t.trailerName}</p>
+                                <div class="trailer-card-meta">
+                                    ${t.year ? `<span>${t.year}</span><span class="trailer-card-dot">•</span>` : ''}
+                                    <span class="trailer-card-rating">★ ${ratingStr}</span>
+                                    ${publishedStr ? `<span class="trailer-card-dot">•</span><span>${publishedStr}</span>` : ''}
+                                </div>
+                                ${t.overview ? `<p class="trailer-card-overview">${t.overview}</p>` : ''}
+                                <div class="trailer-card-footer">
+                                    <span class="trailer-card-count">${t.videoCount} video${t.videoCount === 1 ? '' : 's'} en YouTube</span>
+                                    <span class="trailer-card-cta">Ver trailer →</span>
+                                </div>
                             </div>
-                            <div class="trailer-card-play-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                        </div>
+                        </article>
                     `;
                 }).join('');
                 
                 container.querySelectorAll('.trailer-card[data-video-key]').forEach(card => {
                     card.addEventListener('click', () => {
-                        window.open(`https://www.youtube.com/watch?v=${card.dataset.videoKey}`, '_blank', 'noopener,noreferrer');
+                        openVideoLightbox(
+                            card.dataset.videoKey,
+                            card.dataset.videoTitle || '',
+                            card.dataset.videoOverview || '',
+                            card.dataset.videoYear || '',
+                            card.dataset.videoRating || ''
+                        );
                     });
                 });
 
                 const nextEl = container.nextElementSibling;
                 if (nextEl && nextEl.classList.contains('expand-btn-container')) {
                     nextEl.remove();
-                }
-                
-                if (validTrailers.length > 4) {
-                    const btnContainer = document.createElement('div');
-                    btnContainer.className = 'expand-btn-container';
-                    btnContainer.innerHTML = `
-                        <button class="expand-section-btn">
-                            <span>Show More</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                    `;
-                    container.after(btnContainer);
-                    
-                    btnContainer.querySelector('button').addEventListener('click', (e) => {
-                        const isCollapsed = container.classList.toggle('collapsed');
-                        const btn = e.currentTarget;
-                        btn.classList.toggle('expanded', !isCollapsed);
-                        btn.querySelector('span').textContent = isCollapsed ? 'Show More' : 'Show Less';
-                    });
                 }
             } else {
                 container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4);">No trailers found.</p>';
@@ -1416,6 +1503,8 @@ window.pushNavState = function() {
         scrollY: savedState.scrollY,
         searchValue: savedState.searchValue,
         isHome: isHome,
+        activeTab: document.body.dataset.activeTab || 'home',
+        searchActive: document.body.classList.contains('search-active'),
         backdrops: typeof backdrops !== 'undefined' ? [...backdrops] : [],
         originalBackdrops: typeof originalBackdrops !== 'undefined' ? [...originalBackdrops] : [],
         settingsBtnDisplay: settingsBtn ? settingsBtn.style.display : '',
@@ -1434,6 +1523,8 @@ window.goBack = function() {
         }
         
         if (prevState.isHome) {
+            enterHomeMode();
+            bindTabViewport(prevState.activeTab || 'home');
             if (searchInput) {
                 searchInput.value = '';
                 searchInput.blur();
@@ -1444,6 +1535,10 @@ window.goBack = function() {
             }
             fetchLatestBackdrops();
         } else {
+            enterDetailMode();
+            if (prevState.searchActive) {
+                document.body.classList.add('search-active');
+            }
             if (searchInput) {
                 searchInput.value = prevState.searchValue;
             }
@@ -1457,9 +1552,10 @@ window.goBack = function() {
                 const labelEl = document.getElementById('backdrop-label');
                 if (labelEl) labelEl.textContent = prevState.labelContent;
             }
+            // Detail pages use normal document scroll; the tabbed home layout doesn't (each
+            // tab panel scrolls on its own), so only restore document scrollY for detail pages.
+            window.scrollTo({ top: prevState.scrollY, behavior: 'instant' });
         }
-        
-        window.scrollTo({ top: prevState.scrollY, behavior: 'instant' });
     } else {
         restoreHome();
     }
@@ -1477,41 +1573,67 @@ window.restoreHome = function() {
         searchHistoryContainer.classList.remove('active');
     }
     main.innerHTML = `
-        <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-grid" id="now-playing-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-grid" id="trending-movies-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-grid" id="trending-tv-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Popular Trailers</h2><div class="media-grid-trailers" id="popular-trailers-list"></div></section>
-        <section class="media-section"><h2 class="section-title">Latest Industry News</h2><div class="news-grid-home" id="industry-news-list"></div></section>
-        <section class="links-section">
-            <h2 class="section-title">Explore More</h2>
-            <div class="links-grid">
-                <a href="https://www.themoviedb.org/" target="_blank" class="external-link tmdb" title="The Movie Database">
-                    <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB">
-                </a>
-                <a href="https://letterboxd.com/" target="_blank" class="external-link letterboxd" title="Letterboxd">
-                    <img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd">
-                </a>
-                <a href="https://www.imdb.com/" target="_blank" class="external-link imdb" title="IMDb">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb">
-                </a>
-                <a href="https://www.rottentomatoes.com/" target="_blank" class="external-link rotten" title="Rotten Tomatoes">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg" alt="Rotten Tomatoes">
-                </a>
-            </div>
-        </section>
+        <div class="tab-viewport" id="tab-viewport">
+            <section class="tab-panel tab-panel--home" data-tab="home" id="tab-panel-home">
+                <header class="hero-header" data-header>
+                    <div class="hero-header__glow" aria-hidden="true"></div>
+                    <div class="hero-header__content">
+                        <div class="hero-header__title-wrapper">
+                            <h1 class="hero-header__title">
+                                <span>Post</span>
+                                <span>Credits</span>
+                            </h1>
+                        </div>
+                    </div>
+                </header>
+            </section>
+            <section class="tab-panel" data-tab="media" id="tab-panel-media">
+                <div class="tab-panel-inner">
+                    <section class="media-section"><h2 class="section-title">In Theaters Near You</h2><div class="media-grid" id="now-playing-list"></div></section>
+                    <section class="media-section"><h2 class="section-title">Trending Movies</h2><div class="media-grid" id="trending-movies-list"></div></section>
+                    <section class="media-section"><h2 class="section-title">Latest Series</h2><div class="media-grid" id="trending-tv-list"></div></section>
+                    <section class="links-section">
+                        <h2 class="section-title">Explore More</h2>
+                        <div class="links-grid">
+                            <a href="https://www.themoviedb.org/" target="_blank" class="external-link tmdb" title="The Movie Database">
+                                <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB">
+                            </a>
+                            <a href="https://letterboxd.com/" target="_blank" class="external-link letterboxd" title="Letterboxd">
+                                <img src="https://a.ltrbxd.com/logos/letterboxd-logo-h-neg-rgb-1000px.png" alt="Letterboxd">
+                            </a>
+                            <a href="https://www.imdb.com/" target="_blank" class="external-link imdb" title="IMDb">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb">
+                            </a>
+                            <a href="https://www.rottentomatoes.com/" target="_blank" class="external-link rotten" title="Rotten Tomatoes">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Rotten_Tomatoes.svg" alt="Rotten Tomatoes">
+                            </a>
+                        </div>
+                    </section>
+                    <div class="global-ads-container" style="width: 100%; padding: 20px; display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; justify-content: center; align-items: center; gap: 24px; z-index: 10; position: relative; scrollbar-width: none;">
+                        <script async="async" data-cfasync="false" src="https://pl29579098.effectivecpmnetwork.com/5b59996c51c718c2f6769a412bd6c106/invoke.js"></script>
+                        <div id="container-5b59996c51c718c2f6769a412bd6c106"></div>
+                    </div>
+                    <footer class="site-credits footer-credits">
+                        Developed by <a href="https://www.diegogarcia-dev.com.ar" target="_blank">dg-dev</a>
+                    </footer>
+                </div>
+            </section>
+            <section class="tab-panel" data-tab="trailers" id="tab-panel-trailers">
+                <div class="tab-panel-inner">
+                    <section class="media-section"><h2 class="section-title">Popular Trailers</h2><div class="media-grid-trailers" id="popular-trailers-list"></div></section>
+                </div>
+            </section>
+            <section class="tab-panel" data-tab="news" id="tab-panel-news">
+                <div class="tab-panel-inner">
+                    <section class="media-section"><h2 class="section-title">Latest Industry News</h2><div class="news-grid-home" id="industry-news-list"></div></section>
+                </div>
+            </section>
+        </div>
     `;
+    enterHomeMode();
+    bindTabViewport();
     loadDefaultContent();
     fetchLatestBackdrops();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-const homeTitleBtn = document.querySelector('.hero-header__title');
-if (homeTitleBtn) {
-    homeTitleBtn.addEventListener('click', () => {
-        if (document.body.classList.contains('is-scrolled')) {
-            restoreHome();
-        }
-    });
 }
 
 if (searchInput) {
@@ -1576,6 +1698,7 @@ if (searchInput) {
                                 </div>
                             </section>
                         `;
+                        enterSearchMode();
                         main.innerHTML = html;
 
                         // Add click listeners to load details
@@ -1608,9 +1731,11 @@ if (searchInput) {
                             });
                         });
                     } else {
+                        enterSearchMode();
                         main.innerHTML = `<h2 style="color:white;text-align:center;margin-top:50px;">No results found for "${query}"</h2>`;
                     }
                 } else {
+                    enterSearchMode();
                     main.innerHTML = `<h2 style="color:white;text-align:center;margin-top:50px;">No results found for "${query}"</h2>`;
                 }
             } catch (error) {
@@ -1622,14 +1747,14 @@ if (searchInput) {
 
 function renderMovieDetails(details, mediaType) {
     pushNavState();
+    enterDetailMode();
     const main = document.getElementById('main-content');
-    
+
     const title = details.title || details.name;
     const year = (details.release_date || details.first_air_date || '').split('-')[0];
     const poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
     
     // Meta data
-    const genresListText = details.genres && details.genres.length > 0 ? details.genres.map(g => g.name).join(' / ').toUpperCase() : 'FEATURED';
     const runtimeStr = details.runtime ? `${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m` : (details.episode_run_time && details.episode_run_time[0] ? `${details.episode_run_time[0]}m` : '');
     const language = details.spoken_languages && details.spoken_languages.length > 0 ? details.spoken_languages[0].english_name : (details.original_language ? details.original_language.toUpperCase() : '');
 
@@ -1691,27 +1816,6 @@ function renderMovieDetails(details, mediaType) {
     const tmdbLink = `<a href="https://www.themoviedb.org/${mediaType}/${details.id}" target="_blank" class="link-btn tmdb-link" title="TMDB"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB"></a>`;
     const favClass = isFavorite(details.id) ? 'active' : '';
     const favButton = `<button class="fav-btn ${favClass}" id="fav-btn" data-id="${details.id}" title="Toggle Favorite"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>`;
-
-    // Rating Circle
-    const ratingHTML = `
-        <div class="cinematic-rating-circle" style="transform: scale(0.8); transform-origin: left center; margin: 0;">
-            <svg viewBox="0 0 36 36" class="circular-chart yellow">
-                <path class="circle-bg"
-                d="M18 2.0845
-                    a 15.9155 15.9155 0 0 1 0 31.831
-                    a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path class="circle"
-                stroke-dasharray="${ratingRaw * 10}, 100"
-                d="M18 2.0845
-                    a 15.9155 15.9155 0 0 1 0 31.831
-                    a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <text x="18" y="20.35" class="percentage">${ratingStr}</text>
-            </svg>
-            <span class="rating-label" style="display: block; text-align: center; margin-top: 5px; font-weight: bold; font-size: 1.2rem;">TMDB</span>
-        </div>
-    `;
 
     // Media (Trailers & Captures in 3x3 Grid)
     let mediaItems = [];
@@ -1801,38 +1905,94 @@ function renderMovieDetails(details, mediaType) {
     const isBackButton = appHistory.length > 0;
     const btnAction = isBackButton ? 'goBack()' : 'restoreHome()';
     const btnTitle = isBackButton ? 'Volver atrás' : 'Volver al inicio';
-    const btnIcon = isBackButton 
-        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>` 
+    const btnIcon = isBackButton
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
 
+    // --- Fields for the detail sheet layout ---
+    const genresList = details.genres && details.genres.length > 0
+        ? details.genres.map(g => g.name).join(', ')
+        : 'Sin género';
+
+    const filledStars = Math.round((ratingRaw || 0) / 2);
+    const starsHTML = Array.from({ length: 5 })
+        .map((_, i) => `<span class="${i < filledStars ? 'is-on' : ''}">★</span>`)
+        .join('');
+
+    const releaseDateRaw = details.release_date || details.first_air_date || '';
+    let releaseStr = '';
+    if (releaseDateRaw) {
+        try {
+            releaseStr = new Date(releaseDateRaw).toLocaleDateString(navigator.language || 'es-MX', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+        } catch (e) {
+            releaseStr = releaseDateRaw;
+        }
+    }
+
+    // directorText already carries the clickable span; drop its English prefix for the meta list
+    const directorPlain = directorText.replace(/^Director by\s*/, '').replace(/^Created by\s*/, '');
+
+    const castLine = details.credits && details.credits.cast
+        ? details.credits.cast.slice(0, 4).map(a => `<span class="clickable-person" data-id="${a.id}">${a.name}</span>`).join(', ')
+        : '';
+
+    const heroTrailer = details.videos && details.videos.results
+        ? (details.videos.results.find(v => v.site === 'YouTube' && v.type === 'Trailer')
+            || details.videos.results.find(v => v.site === 'YouTube'))
+        : null;
+    const heroTrailerKey = heroTrailer ? heroTrailer.key : '';
+
     const html = `
-        <div class="movie-details-container cinematic-view">
-            <div class="cinematic-details-hero" style="background-image: url('https://image.tmdb.org/t/p/w1280${details.backdrop_path || details.poster_path}');">
+        <div class="movie-details-container cinematic-view detail-sheet">
+            <div class="detail-sheet__bar">
                 <button class="go-back-btn" onclick="${btnAction}" title="${btnTitle}">
                     ${btnIcon}
                 </button>
-                <div class="cinematic-hero-overlay"></div>
-                <div class="ambient-glow-bg"></div>
-                <div class="cinematic-hero-content-new">
-                    <span class="hero-collection-tag">${genresListText}</span>
-                    
-                    <div class="hero-title-rating-row">
-                        <h1 class="cinematic-title-logan-new">${title.toUpperCase()}</h1>
-                        <div class="hero-rating-wrapper">
-                            ${ratingHTML}
-                        </div>
+                <span class="detail-sheet__bar-label" title="${title.replace(/"/g, '&quot;')}">${title}</span>
+                <button class="go-back-btn view-fullscreen-btn" onclick="toggleBackdropView()" title="Ver a pantalla completa">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></svg>
+                </button>
+            </div>
+
+            <div class="detail-sheet__poster" style="--detail-backdrop: url('https://image.tmdb.org/t/p/w1280${details.backdrop_path || details.poster_path}'); --detail-portrait: url('https://image.tmdb.org/t/p/w780${details.poster_path || details.backdrop_path}');">
+                ${heroTrailerKey ? `
+                <button class="detail-sheet__play" data-video-key="${heroTrailerKey}" title="Ver trailer">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M8 5v14l11-7z"/></svg>
+                </button>` : ''}
+            </div>
+
+            <div class="detail-sheet__body">
+                <div class="detail-sheet__lead">
+                    <h1 class="cinematic-title-logan-new detail-sheet__title">${title}</h1>
+                    <p class="detail-sheet__genres">${genresList}</p>
+
+                    <div class="detail-sheet__rating">
+                        <span class="detail-sheet__stars" aria-hidden="true">${starsHTML}</span>
+                        <span class="detail-sheet__score">${ratingStr}</span>
+                        ${details.vote_count ? `<span class="detail-sheet__votes">(${details.vote_count.toLocaleString()} votos)</span>` : ''}
                     </div>
 
-                    <div class="hero-metadata-row">
-                        ${directorText ? `<span class="hero-director">${directorText}</span>` : ''}
-                        ${directorText ? `<span class="hero-meta-divider">•</span>` : ''}
-                        <span class="hero-meta-year">${year}</span>
-                        <span class="hero-meta-divider">•</span>
-                        <span class="hero-meta-runtime">${runtimeStr}</span>
-                    </div>
+                    <p class="detail-sheet__synopsis">${details.overview || 'Sin descripción disponible.'}</p>
 
-                    <p class="hero-synopsis-new">${details.overview || 'Sin descripción disponible.'}</p>
-                    
+                    <div class="detail-sheet__cta-wrap">
+                        ${heroTrailerKey
+                            ? `<button class="detail-sheet__cta" data-video-key="${heroTrailerKey}">Ver trailer</button>`
+                            : `<button class="detail-sheet__cta" onclick="document.querySelector('.detail-sheet__rest').scrollIntoView({ behavior: 'smooth' })">Ver detalles</button>`}
+                        <span class="detail-sheet__fine">${[releaseStr || year, runtimeStr].filter(Boolean).join(' · ')}</span>
+                    </div>
+                </div>
+
+                <div class="detail-sheet__rest">
+                    <dl class="detail-sheet__meta">
+                        ${directorText ? `<div class="detail-sheet__meta-row"><dt>${mediaType === 'tv' ? 'Creación' : 'Dirección'}</dt><dd>${directorPlain}</dd></div>` : ''}
+                        ${castLine ? `<div class="detail-sheet__meta-row"><dt>Reparto</dt><dd>${castLine}</dd></div>` : ''}
+                        <div class="detail-sheet__meta-row"><dt>Estreno</dt><dd>${releaseStr || year || '—'}</dd></div>
+                        ${runtimeStr ? `<div class="detail-sheet__meta-row"><dt>Duración</dt><dd>${runtimeStr}</dd></div>` : ''}
+                        ${language ? `<div class="detail-sheet__meta-row"><dt>Idioma</dt><dd>${language}</dd></div>` : ''}
+                    </dl>
+
                     ${watchProvidersHTML}
 
                     <div class="movie-links-row-new">
@@ -1871,10 +2031,16 @@ function renderMovieDetails(details, mediaType) {
 
     main.innerHTML = html;
 
-    // Attach click listeners for video cards — opens YouTube directly (mobile opens app)
-    main.querySelectorAll('.media-capture-card[data-video-key]').forEach(card => {
+    // Video cards and the hero play button play inline in the lightbox
+    main.querySelectorAll('[data-video-key]').forEach(card => {
         card.addEventListener('click', () => {
-            window.open(`https://www.youtube.com/watch?v=${card.dataset.videoKey}`, '_blank', 'noopener,noreferrer');
+            openVideoLightbox(
+                card.dataset.videoKey,
+                card.dataset.videoTitle || title,
+                card.dataset.videoOverview || details.overview || '',
+                card.dataset.videoYear || year,
+                card.dataset.videoRating || ratingStr
+            );
         });
     });
     
@@ -1956,8 +2122,9 @@ function renderMovieDetails(details, mediaType) {
 
 function renderPersonDetails(details) {
     pushNavState();
+    enterDetailMode();
     const main = document.getElementById('main-content');
-    
+
     const name = details.name;
     const profile = details.profile_path ? `https://image.tmdb.org/t/p/w500${details.profile_path}` : 'https://via.placeholder.com/300x450?text=No+Photo';
     
@@ -2083,8 +2250,11 @@ function renderPersonDetails(details) {
             <button class="go-back-btn" onclick="${btnAction}" title="${btnTitle}">
                 ${btnIcon}
             </button>
+            <button class="go-back-btn view-fullscreen-btn" onclick="toggleBackdropView()" title="Ver a pantalla completa">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></svg>
+            </button>
             <div class="cinematic-hero-overlay"></div>
-            
+
             <div class="cinematic-hero-content">
                 <img class="cinematic-hero-poster-bg" src="${profile}" alt="">
                 <h1 class="cinematic-title-logan" style="font-size: clamp(3rem, 10vw, 8rem);">${name.toUpperCase()}</h1>
@@ -2199,18 +2369,32 @@ function renderPersonDetails(details) {
 }
 
 // --- Back to top functionality ---
+// While the tabbed layout is active, the document itself doesn't scroll — each tab
+// panel scrolls independently — so track whichever panel is currently active instead.
 const backToTopBtn = document.getElementById('back-to-top-btn');
 if (backToTopBtn) {
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 400) {
-            backToTopBtn.classList.add('visible');
-        } else {
-            backToTopBtn.classList.remove('visible');
-        }
-    }, { passive: true });
+    function getActiveTabPanel() {
+        if (!document.body.classList.contains('tabs-active')) return null;
+        const activeName = document.body.dataset.activeTab || 'home';
+        const viewport = document.getElementById('tab-viewport');
+        return viewport ? viewport.querySelector(`.tab-panel[data-tab="${activeName}"]`) : null;
+    }
+
+    function checkBackToTop() {
+        const panel = getActiveTabPanel();
+        const y = panel ? panel.scrollTop : window.scrollY;
+        backToTopBtn.classList.toggle('visible', y > 400);
+    }
+
+    document.addEventListener('scroll', checkBackToTop, { capture: true, passive: true });
 
     backToTopBtn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const panel = getActiveTabPanel();
+        if (panel) {
+            panel.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     });
 }
 
