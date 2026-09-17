@@ -150,36 +150,6 @@ input {
 	text-shadow: 0 1px 12px rgba(0, 0, 0, 0.65);
 }
 
-/* Los controles del fondo viven dentro del hero de Inicio (flujo normal, no fijos), así
-   que se deslizan junto con la sección al cambiar de pestaña y nunca flotan sobre otra. */
-.backdrop-controls {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	position: relative;
-	width: fit-content;
-	margin: 20px auto 0;
-	padding: 6px;
-	border-radius: 999px;
-	background: rgba(0, 0, 0, 0.42);
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-}
-
-.backdrop-controls .view-backdrop-btn {
-	padding: 10px;
-	border-color: transparent;
-	background: transparent;
-}
-
-.backdrop-controls .view-backdrop-btn:hover {
-	background: rgba(255, 255, 255, 0.16);
-	border-color: rgba(255, 255, 255, 0.3);
-}
-
 /* El widget fijo ya solo sirve para el título en pantalla completa. */
 body:not(.backdrop-view-mode) .current-backdrop-info {
 	display: none !important;
@@ -1670,9 +1640,7 @@ body.is-scrolled .backdrop-title-row {
 	border-color: rgba(255, 255, 255, 0.4);
 }
 
-body.is-scrolled .view-backdrop-btn,
-body.is-scrolled .settings-backdrop-btn,
-body.is-scrolled .roulette-backdrop-btn {
+body.is-scrolled .backdrop-controls {
 	display: none;
 }
 
@@ -1683,47 +1651,9 @@ body.backdrop-view-mode {
 	touch-action: none;
 }
 
-body.backdrop-view-mode .settings-backdrop-btn,
-body.backdrop-view-mode .roulette-backdrop-btn,
-body.backdrop-view-mode .settings-menu {
+body.backdrop-view-mode .settings-menu,
+body.backdrop-view-mode .roulette-modal {
 	display: none !important;
-}
-
-.settings-menu {
-	position: fixed;
-	top: calc(86px + 48px + 8px + 48px + 8px); /* backdrop-info top + (eye + settings buttons, each ~48px) + gaps */
-	right: 32px;
-	margin-top: 0;
-	background: var(--surface-2);
-	border: 1px solid rgba(255, 255, 255, 0.15);
-	border-radius: 16px;
-	padding: 20px;
-	display: none;
-	flex-direction: column;
-	gap: 12px;
-	z-index: 2500;
-	text-align: left;
-	width: min(100vw - 32px, 340px);
-	max-height: calc(100vh - 32px - 44px - 8px - 16px); /* stays inside viewport */
-	overflow-y: auto;
-	overscroll-behavior: contain;
-	transition: background 0.3s ease;
-}
-
-/* El panel de ajustes vive a nivel raíz: en escritorio se abre centrado bajo la barra
-   de búsqueda, en móvil como hoja inferior (ver el bloque de @media más abajo). */
-@media (min-width: 769px) {
-	.settings-menu {
-		top: 110px;
-		left: 50%;
-		right: auto;
-		transform: translateX(-50%);
-		max-height: min(72vh, 620px);
-	}
-}
-
-.settings-menu.active {
-	display: flex;
 }
 
 .settings-action-btn {
@@ -2942,126 +2872,6 @@ body.backdrop-view-mode .header-credits {
 	cursor: pointer;
 	line-height: 1;
 	z-index: 10;
-}
-
-/* Hide settings close button by default on desktop */
-.settings-close-btn {
-	display: none;
-}
-
-/* Móvil: ajustes y Cine-Roulette comparten exactamente la misma hoja inferior
-   (mismo alto, radio, fondo, padding, pastilla y curva de animación que #chat-window). */
-@media (max-width: 768px) {
-	body:has(#backdrop-settings-menu.active),
-	body.roulette-active {
-		overflow: hidden !important;
-	}
-
-	body:has(#backdrop-settings-menu.active)::after {
-		content: '';
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100vw;
-		height: 100dvh;
-		background: rgba(0, 0, 0, 0.5);
-		z-index: 9998;
-		pointer-events: auto;
-		/* El arrastre del tirador baja este valor para aclarar el fondo */
-		opacity: var(--sheet-drag-progress, 1);
-	}
-
-	.roulette-modal {
-		align-items: flex-end;
-		justify-content: center;
-		background: rgba(0, 0, 0, calc(0.5 * var(--sheet-drag-progress, 1)));
-	}
-
-	/* La hoja: idéntica para ambos paneles */
-	.settings-menu,
-	.roulette-modal-content {
-		position: fixed !important;
-		left: 0 !important;
-		right: 0 !important;
-		bottom: 0 !important;
-		top: auto !important;
-		width: 100% !important;
-		max-width: 100% !important;
-		height: 82dvh !important;
-		max-height: 92dvh !important;
-		margin: 0 !important;
-		border-radius: 24px 24px 0 0 !important;
-		border: none !important;
-		border-top: 1px solid rgba(255, 255, 255, 0.09) !important;
-		background: var(--surface-2) !important;
-		padding: 8px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
-		box-sizing: border-box !important;
-		display: flex !important;
-		flex-direction: column !important;
-		align-items: stretch !important;
-		gap: 12px;
-		overflow-y: auto;
-		overscroll-behavior: contain;
-		z-index: 9999 !important;
-		transform: translateY(100%);
-		visibility: hidden;
-		transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.38s, background 0.3s ease !important;
-	}
-
-	/* Tirador de arrastre, como el del chat */
-	.sheet-drag-handle {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		padding: 10px 0 12px;
-		margin: 0 -20px;
-		cursor: grab;
-		flex-shrink: 0;
-		touch-action: none;
-	}
-
-	.sheet-drag-handle span {
-		width: 44px;
-		height: 5px;
-		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.25);
-		transition: background 0.2s ease;
-	}
-
-	.sheet-drag-handle:active span {
-		background: rgba(255, 255, 255, 0.45);
-	}
-
-	/* Sin transición mientras el dedo arrastra */
-	.settings-menu.sheet-dragging,
-	.roulette-modal-content.sheet-dragging {
-		transition: none !important;
-	}
-
-	/* El aspa sobra: aquí se cierra deslizando o tocando fuera */
-	.roulette-close-btn {
-		display: none !important;
-	}
-
-	/* Sin !important en transform: el arrastre escribe transform en línea. */
-	.settings-menu.active,
-	.roulette-modal.active .roulette-modal-content {
-		transform: translateY(0);
-		visibility: visible !important;
-	}
-}
-
-/* Los paneles se cierran tocando fuera (y en móvil, deslizando el tirador). */
-.settings-close-btn {
-	display: none !important;
-}
-
-/* El tirador solo existe en la hoja móvil (en @media, no en regla suelta: al ir después
-   del bloque móvil con la misma especificidad, un `display: none` plano lo anulaba). */
-@media (min-width: 769px) {
-	.sheet-drag-handle {
-		display: none;
-	}
 }
 
 @keyframes spin {
@@ -5947,5 +5757,1859 @@ body:not(.tabs-active) .color-overlay {
 
 	.lightbox-video-wrap {
 		max-width: 100%;
+	}
+}
+
+
+/* =========================================================================
+   Barra de controles del fondo (Inicio) y sus paneles: Ajustes y Cine-Roulette.
+   Misma piel que el resto del chrome: la barra copia la nav inferior (píldora
+   surface-2-soft, botones de 52px con radio 18 y estado activo con el color del
+   título) y los paneles copian la ventana del chat (radio 22, borde sutil y línea
+   de acento superior en --title-color). Declarado al final para ganar a lo anterior.
+   ========================================================================= */
+.backdrop-controls {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	width: fit-content;
+	margin: 26px auto 0;
+	padding: 9px;
+	background: var(--surface-2-soft);
+	border: 1px solid var(--border-subtle);
+	border-radius: 30px;
+	animation: pc-rise 420ms 140ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+.backdrop-control-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	padding: 0;
+	background: transparent;
+	border: none;
+	border-radius: 18px;
+	color: rgba(255, 255, 255, 0.55);
+	cursor: pointer;
+	font-family: inherit;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+
+.backdrop-control-btn svg {
+	width: 22px;
+	height: 22px;
+	flex-shrink: 0;
+	pointer-events: none;
+}
+
+.backdrop-control-btn:hover {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.backdrop-control-btn:focus-visible {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 2px;
+}
+
+.backdrop-control-btn.active {
+	background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.18));
+	color: var(--title-color, #fff);
+}
+
+@media (max-width: 520px) {
+	.backdrop-controls {
+		gap: 4px;
+		padding: 7px;
+	}
+
+	.backdrop-control-btn {
+		width: 46px;
+		height: 46px;
+		border-radius: 15px;
+	}
+}
+
+/* --- Volver arriba: centrado justo encima de la nav inferior (desktop y móvil), con su misma piel --- */
+.back-to-top {
+	left: 50%;
+	right: auto;
+	bottom: 108px; /* nav: bottom 22px + alto ~72px + 14px de aire */
+	width: 46px;
+	height: 46px;
+	z-index: 1500;
+	background: var(--surface-2-soft);
+	border: 1px solid var(--border-subtle);
+	color: rgba(255, 255, 255, 0.75);
+	transform: translate(-50%, 16px);
+}
+
+.back-to-top.visible {
+	transform: translate(-50%, 0);
+}
+
+.back-to-top:hover {
+	background: var(--surface-2-soft);
+	border-color: var(--border-subtle);
+	color: var(--title-color, #fff);
+	transform: translate(-50%, -3px);
+}
+
+body.backdrop-view-mode .back-to-top {
+	display: none;
+}
+
+@media (max-width: 760px) {
+	.back-to-top {
+		left: 50%;
+		right: auto;
+		bottom: 88px;
+		width: 42px;
+		height: 42px;
+	}
+}
+
+@media (max-width: 520px) {
+	.back-to-top {
+		bottom: 84px; /* nav: bottom 14px + alto ~62px + 8px */
+	}
+}
+
+/* =========================================================================
+   Películas & Series: slideshow en el póster + más ancho útil en desktop
+   ========================================================================= */
+.media-card-horizontal .card-poster-wrapper {
+	position: relative;
+	overflow: hidden;
+	background: var(--surface-1);
+}
+
+.media-card-horizontal .card-slide {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	opacity: 0;
+	transform: scale(1.04);
+	transition: opacity 0.9s ease, transform 4s ease-out;
+}
+
+.media-card-horizontal .card-slide.is-active {
+	opacity: 1;
+	transform: scale(1);
+}
+
+.card-slide-dots {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 8px;
+	z-index: 2;
+	display: flex;
+	justify-content: center;
+	gap: 4px;
+	pointer-events: none;
+}
+
+.card-slide-dots span {
+	width: 5px;
+	height: 5px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.45);
+	box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+	transition: width 0.3s ease, background 0.3s ease;
+}
+
+.card-slide-dots span.is-active {
+	width: 14px;
+	background: var(--title-color, #fff);
+}
+
+.media-card-horizontal {
+	transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.media-card-horizontal:hover {
+	transform: translateY(-4px);
+	border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* El pase sigue funcionando: solo fundido, sin zoom */
+	.media-card-horizontal .card-slide {
+		transition: opacity 0.9s ease;
+		transform: none;
+	}
+
+	.media-card-horizontal:hover {
+		transform: none;
+	}
+}
+
+/* Desktop: las pestañas de contenido usan casi todo el ancho en lugar de 1120px fijos */
+@media (min-width: 1280px) {
+	.tab-panel {
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+
+	.tab-panel-inner {
+		width: min(100%, 1680px);
+	}
+
+	#now-playing-list,
+	#trending-movies-list,
+	#trending-tv-list {
+		grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+		gap: 22px;
+	}
+
+	.media-card-horizontal .card-content {
+		padding: 14px 14px 12px !important;
+	}
+
+	.media-card-horizontal .card-title {
+		font-size: 1.02rem;
+	}
+
+	.media-card-horizontal .card-overview {
+		font-size: 0.78rem;
+		-webkit-line-clamp: 3;
+	}
+}
+
+@media (min-width: 1800px) {
+	#now-playing-list,
+	#trending-movies-list,
+	#trending-tv-list {
+		grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+	}
+}
+
+/* =========================================================================
+   Ajustes, Cine-Roulette y Buscador de favoritos = misma ventana que el chat
+   (#chat-window en index.html). Desktop: tarjeta 370x560 abajo a la derecha,
+   surface-2, radio 22, línea de acento; sube con translateY + opacity (0.42s).
+   Móvil: pantalla completa que sube desde abajo (0.38s) y se cierra deslizando
+   el tirador. Solo cambia el contenido.
+   ========================================================================= */
+.app-sheet {
+	position: fixed;
+	top: auto;
+	left: auto;
+	right: 24px;
+	bottom: 24px;
+	width: 370px;
+	max-width: calc(100vw - 48px);
+	height: 560px;
+	max-height: calc(100dvh - 48px);
+	margin: 0;
+	padding: 0;
+	gap: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	overflow: hidden;
+	text-align: left;
+	color: var(--text);
+	background: var(--surface-2);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 22px;
+	box-shadow: none;
+	z-index: 9998;
+	opacity: 0;
+	pointer-events: none;
+	transform-origin: bottom right;
+	transform: translateY(calc(100% + 32px));
+	transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease;
+	animation: none;
+}
+
+/* Línea de acento superior, como el chat */
+.app-sheet::before {
+	content: '';
+	display: block;
+	height: 2px;
+	background: var(--title-color, #e50914);
+	flex-shrink: 0;
+}
+
+.app-sheet.active,
+.roulette-modal.active .app-sheet {
+	transform: translateY(0);
+	opacity: 1;
+	pointer-events: all;
+}
+
+/* El envoltorio de la ruleta ya no oscurece ni corta la animación de salida */
+.roulette-modal {
+	display: block;
+	position: fixed;
+	inset: 0;
+	padding: 0;
+	opacity: 1;
+	background: transparent;
+	visibility: hidden;
+	pointer-events: none;
+	transition: visibility 0s linear 0.42s;
+	z-index: 9998;
+}
+
+.roulette-modal.active {
+	display: block;
+	visibility: visible;
+	pointer-events: auto;
+	transition-delay: 0s;
+}
+
+/* Buscador de favoritos: a la izquierda de Ajustes si cabe; si no, encima */
+.fav-search-sheet {
+	z-index: 9999;
+}
+
+@media (min-width: 1200px) {
+	.fav-search-sheet {
+		right: calc(24px + 370px + 16px);
+	}
+}
+
+@media (min-width: 769px) and (max-width: 1180px) {
+	.app-sheet {
+		bottom: 100px;
+		max-height: calc(100dvh - 124px);
+	}
+}
+
+/* --- Cabecera: avatar + nombre en píldora centrada, controles a los lados --- */
+.sheet-header {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0;
+	padding: 16px 54px 10px;
+	background: transparent;
+	flex-shrink: 0;
+}
+
+.sheet-header .chat-meta {
+	max-width: 220px;
+}
+
+.sheet-status {
+	font-size: 0.62rem;
+	color: rgba(255, 255, 255, 0.38);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sheet-close-btn,
+.sheet-back-btn {
+	position: absolute;
+	top: 16px;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.06);
+	color: rgba(255, 255, 255, 0.55);
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+
+.sheet-close-btn {
+	right: 14px;
+}
+
+.sheet-back-btn {
+	left: 14px;
+}
+
+.sheet-close-btn:hover,
+.sheet-back-btn:hover {
+	background: var(--title-glow-dimmer, rgba(229, 9, 20, 0.2));
+	color: var(--title-color, #ff6b6b);
+	border-color: var(--title-glow-dim, rgba(229, 9, 20, 0.3));
+}
+
+.sheet-close-btn:focus-visible,
+.sheet-back-btn:focus-visible {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 2px;
+}
+
+.sheet-drag-handle {
+	display: none;
+}
+
+/* --- Cuerpo desplazable --- */
+.sheet-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 6px 16px 18px;
+	display: flex;
+	flex-direction: column;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.settings-menu .sheet-body {
+	background: linear-gradient(to bottom, var(--title-glow-dimmer, rgba(255, 255, 255, 0.04)) 0%, transparent 200px);
+	padding-top: 14px;
+}
+
+/* Degradado de bienvenida, igual que #chat-hero */
+.sheet-hero {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 8px;
+	margin: -6px -16px 16px;
+	padding: 22px 20px 18px;
+	background: linear-gradient(to bottom, var(--title-glow-dim, rgba(229, 9, 20, 0.45)) 0%, transparent 76%);
+}
+
+.sheet-hero__greeting {
+	font-size: 0.95rem;
+	color: rgba(255, 255, 255, 0.75);
+}
+
+.sheet-hero__question {
+	margin: 0;
+	font-size: 1.45rem;
+	font-weight: 800;
+	line-height: 1.22;
+	letter-spacing: 0;
+	text-transform: none;
+	color: #fff;
+	max-width: 18ch;
+}
+
+/* --- Contenido de Ajustes --- */
+.settings-section-title {
+	margin: 0 0 10px;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+.settings-menu .segmented-control {
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 14px;
+	padding: 4px;
+}
+
+.settings-menu .segmented-control .control-item {
+	border: 1px solid transparent;
+	border-radius: 10px;
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 0.8rem;
+}
+
+.settings-menu .segmented-control .control-item:has(input[type="radio"]:checked) {
+	background: var(--title-glow-dimmer, rgba(255, 255, 255, 0.16));
+	border-color: var(--title-glow-dim, transparent);
+	color: var(--title-color, #fff);
+	font-weight: 600;
+}
+
+.settings-menu .segmented-control .control-item:has(input:focus-visible) {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 1px;
+}
+
+.settings-action-btn {
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 999px;
+	background: var(--surface-1);
+	color: #fff;
+	padding: 10px 14px;
+	font-size: 0.82rem;
+}
+
+.settings-action-btn:hover {
+	background: var(--title-glow-dimmer, rgba(255, 255, 255, 0.12));
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.2));
+	color: var(--title-color, #fff);
+}
+
+.settings-action-btn[aria-expanded="true"] {
+	background: var(--title-glow-dimmer, rgba(255, 255, 255, 0.12));
+	color: var(--title-color, #fff);
+}
+
+.settings-fav-add {
+	margin-bottom: 16px;
+}
+
+/* --- Buscador de favoritos --- */
+.fav-search-field {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 18px;
+	color: rgba(255, 255, 255, 0.45);
+	transition: border-color 0.2s ease;
+	flex-shrink: 0;
+}
+
+.fav-search-field:focus-within {
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.3));
+	color: var(--title-color, #fff);
+}
+
+.fav-search-field input {
+	flex: 1;
+	min-width: 0;
+	background: transparent;
+	border: none;
+	outline: none;
+	color: #fff;
+	font: inherit;
+	font-size: 0.88rem;
+}
+
+.fav-search-field input::-webkit-search-cancel-button {
+	filter: invert(1);
+	opacity: 0.5;
+}
+
+.fav-search-results {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.fav-search-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 14px;
+	animation: pc-rise 260ms ease-out both;
+}
+
+.fav-search-row__poster {
+	width: 36px;
+	height: 54px;
+	object-fit: cover;
+	border-radius: 8px;
+	flex-shrink: 0;
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.fav-search-row__info {
+	flex: 1;
+	min-width: 0;
+}
+
+.fav-search-row__title {
+	margin: 0;
+	font-size: 0.86rem;
+	font-weight: 700;
+	color: #fff;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.fav-search-row__type {
+	margin: 2px 0 0;
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+.fav-search-row .mini-fav-btn {
+	width: 34px;
+	height: 34px;
+	min-width: 34px;
+	padding: 0;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.fav-search-empty {
+	margin: 8px 0 0;
+	text-align: center;
+	font-size: 0.82rem;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+/* --- Contenido de Cine-Roulette --- */
+.roulette-modal-content .roulette-genre-selector {
+	justify-content: center;
+	margin-bottom: 16px;
+}
+
+.genre-selector-label {
+	font-size: 0.68rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+.roulette-select {
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 999px;
+	padding: 7px 14px;
+	font-size: 0.8rem;
+}
+
+.roulette-select:focus-visible {
+	border-color: var(--title-glow-dim, #fff);
+}
+
+.roulette-select option {
+	background: var(--surface-2);
+}
+
+.roulette-modal-content .roulette-wheel-container {
+	height: 150px;
+	flex-shrink: 0;
+	margin-bottom: 16px;
+}
+
+.roulette-modal-content .roulette-track {
+	gap: 12px;
+	padding: 0 calc(50% - 45px);
+}
+
+.roulette-modal-content .roulette-item {
+	width: 90px;
+	height: 126px;
+}
+
+.roulette-spin-btn {
+	width: 100%;
+	flex-shrink: 0;
+	background: var(--title-color, #fff);
+	color: #0b0d14;
+	border-radius: 999px;
+	padding: 12px 20px;
+	font-size: 0.85rem;
+	letter-spacing: 0.08em;
+}
+
+.roulette-spin-btn:hover:not(:disabled) {
+	transform: none;
+	filter: brightness(1.08);
+}
+
+.roulette-winner-card {
+	margin-top: 16px;
+	padding: 14px;
+	gap: 14px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 16px;
+}
+
+.roulette-winner-btn {
+	border-radius: 999px;
+	border-color: rgba(255, 255, 255, 0.1);
+}
+
+.roulette-winner-btn:hover {
+	background: var(--title-glow-dimmer, rgba(255, 255, 255, 0.1));
+	border-color: var(--title-glow-dim, transparent);
+	color: var(--title-color, #fff);
+}
+
+/* --- Móvil: pantalla completa, igual que el chat --- */
+@media (max-width: 768px) {
+	.app-sheet {
+		top: 0 !important;
+		left: 0 !important;
+		right: 0 !important;
+		bottom: 0 !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		height: 100dvh !important;
+		max-height: 100dvh !important;
+		border-radius: 0 !important;
+		border: none !important;
+		opacity: 1;
+		z-index: 9999;
+		transform-origin: bottom center;
+		transform: translateY(100%);
+		/* Sin !important: el arrastre del tirador escribe transform en línea */
+		transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+	}
+
+	.fav-search-sheet {
+		z-index: 10000;
+	}
+
+	.app-sheet::before {
+		display: none;
+	}
+
+	.app-sheet.active,
+	.roulette-modal.active .app-sheet {
+		transform: translateY(0);
+	}
+
+	.app-sheet.sheet-dragging {
+		transition: none !important;
+	}
+
+	.roulette-modal {
+		transition: visibility 0s linear 0.38s;
+	}
+
+	.sheet-drag-handle {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding: 10px 0 2px;
+		margin: 0;
+		cursor: grab;
+		flex-shrink: 0;
+		touch-action: none;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.sheet-drag-handle span {
+		width: 38px;
+		height: 4px;
+		border-radius: 99px;
+		background: rgba(255, 255, 255, 0.18);
+		transition: background 0.2s, width 0.2s;
+	}
+
+	.sheet-drag-handle:active span {
+		background: var(--title-color, rgba(229, 9, 20, 0.8));
+		width: 46px;
+	}
+
+	.sheet-header {
+		padding-top: 10px;
+	}
+
+	.sheet-back-btn {
+		top: 10px;
+	}
+
+	/* Pantalla completa: se cierra deslizando el tirador, el ✕ sobra (como en el chat) */
+	.sheet-close-btn {
+		display: none;
+	}
+
+	.sheet-body {
+		padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+	}
+
+	.sheet-hero {
+		padding: 34px 22px 24px;
+	}
+
+	body:has(#backdrop-settings-menu.active),
+	body.roulette-active {
+		overflow: hidden !important;
+	}
+}
+
+/* Sin excepción de movimiento reducido para .app-sheet: deben deslizarse exactamente
+   como #chat-window, que tampoco la tiene. */
+@media (prefers-reduced-motion: reduce) {
+	.fav-search-row {
+		animation: none;
+	}
+}
+
+/* =========================================================================
+   Trailers en desktop: el primero como destacado a lo ancho (póster grande +
+   ficha) y una rejilla más densa debajo que aprovecha el ancho disponible.
+   ========================================================================= */
+.trailer-card {
+	transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.trailer-card:hover {
+	transform: translateY(-4px);
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+.trailer-card-thumb img {
+	transition: transform 0.6s ease;
+}
+
+.trailer-card:hover .trailer-card-thumb img {
+	transform: scale(1.04);
+}
+
+.trailer-card:focus-visible {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 3px;
+}
+
+@media (min-width: 1024px) {
+	.media-grid-trailers {
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 22px;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child {
+		grid-column: 1 / -1;
+		display: grid;
+		grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+		border-radius: 20px;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child:hover {
+		transform: none;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-thumb {
+		aspect-ratio: auto;
+		min-height: 380px;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-thumb::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(to right, transparent 60%, var(--surface-1-soft, rgba(18, 20, 29, 0.84)) 100%);
+		pointer-events: none;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-play-btn {
+		width: 76px;
+		height: 76px;
+		z-index: 1;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-play-btn svg {
+		width: 32px;
+		height: 32px;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-type {
+		top: 16px;
+		left: 16px;
+		font-size: 0.68rem;
+		padding: 5px 12px;
+		z-index: 1;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-body {
+		justify-content: center;
+		gap: 10px;
+		padding: 32px 34px;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-title {
+		font-size: clamp(1.6rem, 2.2vw, 2.3rem);
+		line-height: 1.1;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-subtitle {
+		font-size: 0.9rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-meta {
+		font-size: 0.82rem;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-overview {
+		font-size: 0.95rem;
+		line-height: 1.6;
+		-webkit-line-clamp: 6;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-footer {
+		font-size: 0.8rem;
+		margin-top: 14px;
+		padding-top: 14px;
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-cta {
+		display: inline-flex;
+		align-items: center;
+		padding: 10px 18px;
+		border-radius: 999px;
+		background: var(--title-color, #fff);
+		color: #0b0d14;
+	}
+}
+
+@media (min-width: 1800px) {
+	.media-grid-trailers {
+		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	}
+
+	.media-grid-trailers > .trailer-card:first-child .trailer-card-thumb {
+		min-height: 460px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.trailer-card,
+	.trailer-card-thumb img {
+		transition: none;
+	}
+
+	.trailer-card:hover,
+	.trailer-card:hover .trailer-card-thumb img {
+		transform: none;
+	}
+}
+
+/* =========================================================================
+   Películas & Series: la primera tarjeta de cada sección es un destacado a lo
+   ancho con la misma disposición que el trailer destacado (slideshow de
+   fotogramas a la izquierda, ficha a la derecha).
+   ========================================================================= */
+@media (min-width: 1024px) {
+	#now-playing-list > .media-card-horizontal:first-child,
+	#trending-movies-list > .media-card-horizontal:first-child,
+	#trending-tv-list > .media-card-horizontal:first-child {
+		grid-column: 1 / -1;
+		display: grid !important;
+		grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+		grid-template-rows: 1fr auto;
+		border-radius: 20px !important;
+		overflow: hidden;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child:hover,
+	#trending-movies-list > .media-card-horizontal:first-child:hover,
+	#trending-tv-list > .media-card-horizontal:first-child:hover {
+		transform: none;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-movies-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-tv-list > .media-card-horizontal:first-child .card-poster-wrapper {
+		grid-column: 1;
+		grid-row: 1 / span 2;
+		width: 100% !important;
+		height: 100% !important;
+		min-height: 380px;
+		aspect-ratio: auto;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-poster-wrapper::after,
+	#trending-movies-list > .media-card-horizontal:first-child .card-poster-wrapper::after,
+	#trending-tv-list > .media-card-horizontal:first-child .card-poster-wrapper::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		background: linear-gradient(to right, transparent 60%, var(--surface-1-soft, rgba(18, 20, 29, 0.84)) 100%);
+		pointer-events: none;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-slide-dots,
+	#trending-movies-list > .media-card-horizontal:first-child .card-slide-dots,
+	#trending-tv-list > .media-card-horizontal:first-child .card-slide-dots {
+		bottom: 16px;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-content,
+	#trending-movies-list > .media-card-horizontal:first-child .card-content,
+	#trending-tv-list > .media-card-horizontal:first-child .card-content {
+		grid-column: 2;
+		grid-row: 1;
+		justify-content: center !important;
+		gap: 10px !important;
+		padding: 32px 34px 12px !important;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-title,
+	#trending-movies-list > .media-card-horizontal:first-child .card-title,
+	#trending-tv-list > .media-card-horizontal:first-child .card-title {
+		font-size: clamp(1.6rem, 2.2vw, 2.3rem);
+		line-height: 1.1;
+		-webkit-line-clamp: 3;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-meta-line,
+	#trending-movies-list > .media-card-horizontal:first-child .card-meta-line,
+	#trending-tv-list > .media-card-horizontal:first-child .card-meta-line {
+		font-size: 0.9rem;
+		letter-spacing: 0.04em;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-overview,
+	#trending-movies-list > .media-card-horizontal:first-child .card-overview,
+	#trending-tv-list > .media-card-horizontal:first-child .card-overview {
+		font-size: 0.95rem;
+		line-height: 1.6;
+		-webkit-line-clamp: 6;
+		color: rgba(255, 255, 255, 0.72);
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .genre-badge,
+	#trending-movies-list > .media-card-horizontal:first-child .genre-badge,
+	#trending-tv-list > .media-card-horizontal:first-child .genre-badge {
+		font-size: 0.74rem;
+		padding: 3px 11px;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-rating-wrapper,
+	#trending-movies-list > .media-card-horizontal:first-child .card-rating-wrapper,
+	#trending-tv-list > .media-card-horizontal:first-child .card-rating-wrapper {
+		grid-column: 2;
+		grid-row: 2;
+		margin: 0 34px !important;
+		width: auto !important;
+		padding: 14px 0 26px;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .rating-circle-container,
+	#trending-movies-list > .media-card-horizontal:first-child .rating-circle-container,
+	#trending-tv-list > .media-card-horizontal:first-child .rating-circle-container {
+		width: 42px;
+		height: 42px;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .rating-number,
+	#trending-movies-list > .media-card-horizontal:first-child .rating-number,
+	#trending-tv-list > .media-card-horizontal:first-child .rating-number {
+		font-size: 0.85rem;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .rating-source,
+	#trending-movies-list > .media-card-horizontal:first-child .rating-source,
+	#trending-tv-list > .media-card-horizontal:first-child .rating-source {
+		font-size: 0.72rem;
+	}
+}
+
+@media (min-width: 1800px) {
+	#now-playing-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-movies-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-tv-list > .media-card-horizontal:first-child .card-poster-wrapper {
+		min-height: 460px;
+	}
+}
+
+/* =========================================================================
+   Ajustes: barra de búsqueda de favoritos arriba, pósters más grandes y
+   tiempo de transición personalizado
+   ========================================================================= */
+.settings-fav-add {
+	margin: 0 0 14px;
+}
+
+.settings-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 11px 14px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 18px;
+	color: rgba(255, 255, 255, 0.45);
+	font: inherit;
+	font-size: 0.86rem;
+	text-align: left;
+	cursor: text;
+	transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.settings-search-bar:hover,
+.settings-search-bar[aria-expanded="true"] {
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.3));
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.settings-search-bar:focus-visible {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 2px;
+}
+
+.settings-search-bar svg {
+	flex-shrink: 0;
+}
+
+.settings-favorites-list {
+	display: flex;
+	gap: 12px;
+	overflow-x: auto;
+	margin: 0 -16px 16px;
+	padding: 2px 16px 10px;
+	scroll-padding-inline: 16px;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+	-webkit-overflow-scrolling: touch;
+}
+
+.settings-favorites-list .fav-drag-item {
+	width: 112px;
+	height: 168px;
+	flex-shrink: 0;
+	object-fit: cover;
+	border-radius: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: var(--surface-1);
+	user-select: none;
+	cursor: grab;
+	transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-favorites-list .fav-drag-item:hover {
+	transform: translateY(-3px);
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.3));
+}
+
+.settings-favorites-empty {
+	margin: 0;
+	padding: 18px 14px;
+	width: 100%;
+	text-align: center;
+	font-size: 0.82rem;
+	color: rgba(255, 255, 255, 0.45);
+	background: var(--surface-1);
+	border: 1px dashed rgba(255, 255, 255, 0.12);
+	border-radius: 14px;
+}
+
+.settings-menu #backdrop-speed-section .segmented-control .control-item {
+	padding-inline: 6px;
+}
+
+.speed-custom {
+	margin-top: 10px;
+	animation: pc-rise 220ms ease-out both;
+}
+
+.speed-custom[hidden] {
+	display: none;
+}
+
+.speed-custom__field {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 14px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 14px;
+	font-size: 0.82rem;
+	color: rgba(255, 255, 255, 0.55);
+	transition: border-color 0.2s ease;
+}
+
+.speed-custom__field:focus-within {
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.3));
+}
+
+.speed-custom__field input {
+	width: 5ch;
+	flex: 1;
+	min-width: 0;
+	padding: 4px 0;
+	background: transparent;
+	border: none;
+	outline: none;
+	color: var(--title-color, #fff);
+	font: inherit;
+	font-size: 1rem;
+	font-weight: 700;
+	text-align: center;
+	-moz-appearance: textfield;
+}
+
+.speed-custom__field input::-webkit-outer-spin-button,
+.speed-custom__field input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.speed-custom__hint {
+	margin: 6px 2px 0;
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.38);
+}
+
+@media (max-width: 768px) {
+	.settings-favorites-list .fav-drag-item {
+		width: 120px;
+		height: 180px;
+	}
+}
+
+/* =========================================================================
+   Noticias: tarjetas clicables, meta en una línea y destacado en desktop
+   ========================================================================= */
+.news-card-home {
+	cursor: pointer;
+}
+
+.news-card-home:hover {
+	transform: translateY(-4px);
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+.news-card-home:focus-visible {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 3px;
+}
+
+.news-card-home .news-card-meta {
+	justify-content: flex-start;
+	flex-wrap: wrap;
+	row-gap: 2px;
+	letter-spacing: 0.02em;
+}
+
+.news-card-home .news-card-readmore {
+	margin-top: 0;
+	white-space: nowrap;
+	flex-shrink: 0;
+	color: var(--title-color, #fff);
+}
+
+.news-card-home:hover .news-card-readmore {
+	transform: translateX(4px);
+}
+
+.news-card-home .news-card-author {
+	min-width: 0;
+}
+
+.news-card-home .news-card-image {
+	transition: transform 0.6s ease;
+}
+
+@media (min-width: 1024px) {
+	.news-grid-home {
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 22px;
+	}
+
+	.news-grid-home > .news-card-home:first-child {
+		grid-column: 1 / -1;
+		display: grid;
+		grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+		border-radius: 20px;
+	}
+
+	.news-grid-home > .news-card-home:first-child:hover {
+		transform: none;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-image {
+		height: auto;
+		min-height: 380px;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-image::after {
+		top: 0;
+		height: auto;
+		background: linear-gradient(to right, transparent 55%, var(--surface-1-soft, rgba(18, 20, 29, 0.84)) 100%);
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-content {
+		justify-content: center;
+		padding: 32px 34px;
+		gap: 12px;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-title {
+		font-size: clamp(1.5rem, 2.1vw, 2.2rem);
+		line-height: 1.12;
+		-webkit-line-clamp: 3;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-description {
+		font-size: 0.98rem;
+		line-height: 1.6;
+		-webkit-line-clamp: 5;
+		flex-grow: 0;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-meta {
+		font-size: 0.8rem;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-category {
+		top: 16px;
+		left: 16px;
+		font-size: 0.7rem;
+		padding: 5px 12px;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-footer {
+		margin-top: 8px;
+	}
+
+	.news-grid-home > .news-card-home:first-child .news-card-readmore {
+		padding: 10px 18px;
+		border-radius: 999px;
+		background: var(--title-color, #fff);
+		color: #0b0d14;
+		font-size: 0.82rem;
+	}
+}
+
+/* =========================================================================
+   Lector de noticias: misma piel que el chat. Desktop → panel de lectura
+   centrado que sube desde abajo; móvil → pantalla completa con tirador.
+   ========================================================================= */
+.news-reader {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	padding: 24px;
+	visibility: hidden;
+	pointer-events: none;
+	transition: visibility 0s linear 0.42s;
+}
+
+.news-reader.active {
+	visibility: visible;
+	pointer-events: auto;
+	transition-delay: 0s;
+}
+
+.news-reader__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.55);
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+.news-reader.active .news-reader__backdrop {
+	opacity: 1;
+}
+
+.news-reader__panel {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: min(820px, 100%);
+	height: 100%;
+	max-height: calc(100dvh - 48px);
+	background: var(--surface-2);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 22px;
+	overflow: hidden;
+	outline: none;
+	opacity: 0;
+	transform: translateY(calc(100% + 32px));
+	transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease;
+}
+
+.news-reader__panel::before {
+	content: '';
+	display: block;
+	height: 2px;
+	background: var(--title-color, #e50914);
+	flex-shrink: 0;
+}
+
+.news-reader.active .news-reader__panel {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.news-reader__scroll {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.news-reader__hero {
+	position: relative;
+	margin: 0 18px;
+	border-radius: 16px;
+	overflow: hidden;
+	aspect-ratio: 16 / 8;
+	background: var(--surface-1);
+}
+
+.news-reader__hero-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.news-reader__hero::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to top, rgba(10, 12, 20, 0.55), transparent 45%);
+	pointer-events: none;
+}
+
+.news-reader__chip {
+	position: absolute;
+	left: 14px;
+	bottom: 14px;
+	z-index: 1;
+	background: var(--surface-2);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 999px;
+	padding: 5px 12px;
+	font-size: 0.66rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--title-color, #fff);
+}
+
+.news-reader__inner {
+	max-width: 680px;
+	margin: 0 auto;
+	padding: 26px 28px calc(36px + env(safe-area-inset-bottom, 0px));
+}
+
+.news-reader__title {
+	margin: 0 0 12px;
+	font-size: clamp(1.55rem, 3.2vw, 2.3rem);
+	font-weight: 800;
+	line-height: 1.15;
+	color: #fff;
+}
+
+.news-reader__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.78rem;
+	color: rgba(255, 255, 255, 0.5);
+	padding-bottom: 18px;
+	margin-bottom: 20px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.news-reader__meta strong {
+	color: rgba(255, 255, 255, 0.85);
+	font-weight: 700;
+}
+
+.news-reader__lead {
+	margin: 0 0 18px;
+	font-size: 1.1rem;
+	line-height: 1.6;
+	color: rgba(255, 255, 255, 0.9);
+	font-weight: 500;
+}
+
+.news-reader__body {
+	font-size: 1rem;
+	line-height: 1.78;
+	color: rgba(255, 255, 255, 0.8);
+	overflow-wrap: break-word;
+}
+
+.news-reader__body[aria-busy="true"] {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.news-reader__body p {
+	margin: 0 0 1.1em;
+}
+
+.news-reader__body h2,
+.news-reader__body h3,
+.news-reader__body h4 {
+	margin: 1.6em 0 0.6em;
+	color: #fff;
+	line-height: 1.25;
+}
+
+.news-reader__body h2 {
+	font-size: 1.35rem;
+}
+
+.news-reader__body h3,
+.news-reader__body h4 {
+	font-size: 1.12rem;
+}
+
+.news-reader__body a {
+	color: var(--title-color, #fff);
+	text-decoration: underline;
+	text-decoration-color: var(--title-glow-dim, rgba(255, 255, 255, 0.4));
+	text-underline-offset: 3px;
+}
+
+.news-reader__body a:hover {
+	text-decoration-color: currentColor;
+}
+
+.news-reader__body blockquote {
+	margin: 1.4em 0;
+	padding: 4px 0 4px 18px;
+	border-left: 3px solid var(--title-color, #fff);
+	color: rgba(255, 255, 255, 0.92);
+	font-size: 1.08rem;
+	font-style: italic;
+}
+
+.news-reader__body ul,
+.news-reader__body ol {
+	margin: 0 0 1.1em;
+	padding-left: 1.3em;
+}
+
+.news-reader__body img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin: 1.4em auto;
+	border-radius: 14px;
+}
+
+.news-reader__body figure {
+	margin: 1.4em 0;
+}
+
+.news-reader__body figcaption {
+	font-size: 0.78rem;
+	color: rgba(255, 255, 255, 0.45);
+	text-align: center;
+	margin-top: -0.8em;
+}
+
+.news-reader__notice {
+	padding: 14px 16px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 14px;
+	font-size: 0.88rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.news-reader__tags {
+	margin-top: 24px;
+}
+
+.news-reader__footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 22px;
+	padding-top: 18px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.news-reader__credit {
+	font-size: 0.78rem;
+	color: rgba(255, 255, 255, 0.45);
+}
+
+.news-reader__source-btn {
+	display: inline-flex;
+	align-items: center;
+	padding: 10px 18px;
+	border-radius: 999px;
+	background: var(--surface-1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #fff;
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-decoration: none;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.news-reader__source-btn:hover {
+	background: var(--title-glow-dimmer, rgba(255, 255, 255, 0.12));
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.2));
+	color: var(--title-color, #fff);
+}
+
+body.news-reader-open {
+	overflow: hidden;
+}
+
+body.backdrop-view-mode .news-reader {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.news-reader {
+		padding: 0;
+	}
+
+	.news-reader__backdrop {
+		display: none;
+	}
+
+	.news-reader__panel {
+		width: 100%;
+		height: 100dvh;
+		max-height: 100dvh;
+		border: none;
+		border-radius: 0;
+		opacity: 1;
+		transform: translateY(100%);
+		transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+	}
+
+	.news-reader__panel::before {
+		display: none;
+	}
+
+	.news-reader__panel.sheet-dragging {
+		transition: none !important;
+	}
+
+	.news-reader.active .news-reader__panel {
+		transform: translateY(0);
+	}
+
+	.news-reader {
+		transition: visibility 0s linear 0.38s;
+	}
+
+	.news-reader__hero {
+		margin: 0 14px;
+		aspect-ratio: 16 / 10;
+	}
+
+	.news-reader__inner {
+		padding: 20px 18px calc(32px + env(safe-area-inset-bottom, 0px));
+	}
+
+	.news-reader__lead {
+		font-size: 1.02rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.news-card-home .news-card-image {
+		transition: none;
+	}
+
+	.news-card-home:hover {
+		transform: none;
+	}
+}
+
+/* El cuerpo de la hoja es flex en columna: sus secciones no deben encogerse (aplastaba los pósters) */
+.sheet-body > * {
+	flex-shrink: 0;
+}
+
+/* Móvil/tablet: el destacado de Películas & Series ocupa las dos columnas en una fila,
+   con los fotogramas en horizontal (en desktop ya es la ficha a lo ancho de arriba). */
+@media (max-width: 1023px) {
+	#now-playing-list > .media-card-horizontal:first-child,
+	#trending-movies-list > .media-card-horizontal:first-child,
+	#trending-tv-list > .media-card-horizontal:first-child {
+		grid-column: 1 / -1;
+		border-radius: 18px !important;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-movies-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-tv-list > .media-card-horizontal:first-child .card-poster-wrapper {
+		aspect-ratio: 16 / 9;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-content,
+	#trending-movies-list > .media-card-horizontal:first-child .card-content,
+	#trending-tv-list > .media-card-horizontal:first-child .card-content {
+		padding: 14px 14px 10px !important;
+		gap: 6px !important;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-title,
+	#trending-movies-list > .media-card-horizontal:first-child .card-title,
+	#trending-tv-list > .media-card-horizontal:first-child .card-title {
+		font-size: 1.25rem;
+		line-height: 1.2;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-meta-line,
+	#trending-movies-list > .media-card-horizontal:first-child .card-meta-line,
+	#trending-tv-list > .media-card-horizontal:first-child .card-meta-line {
+		font-size: 0.8rem;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-overview,
+	#trending-movies-list > .media-card-horizontal:first-child .card-overview,
+	#trending-tv-list > .media-card-horizontal:first-child .card-overview {
+		font-size: 0.82rem;
+		line-height: 1.5;
+		-webkit-line-clamp: 3;
+	}
+
+	#now-playing-list > .media-card-horizontal:first-child .card-rating-wrapper,
+	#trending-movies-list > .media-card-horizontal:first-child .card-rating-wrapper,
+	#trending-tv-list > .media-card-horizontal:first-child .card-rating-wrapper {
+		padding: 10px 14px;
+	}
+}
+
+@media (min-width: 600px) and (max-width: 1023px) {
+	#now-playing-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-movies-list > .media-card-horizontal:first-child .card-poster-wrapper,
+	#trending-tv-list > .media-card-horizontal:first-child .card-poster-wrapper {
+		aspect-ratio: 21 / 9;
+	}
+}
+
+/* =========================================================================
+   Reproductor en línea: el vídeo suena dentro de su propia tarjeta
+   ========================================================================= */
+.inline-player {
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	background: #000;
+	animation: pc-fade 220ms ease-out both;
+}
+
+.inline-player iframe {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+
+.inline-player__close {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 1;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	background: rgba(10, 12, 20, 0.72);
+	color: rgba(255, 255, 255, 0.85);
+	font-size: 0.95rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+
+.inline-player__close:hover {
+	background: var(--title-color, #fff);
+	color: #0b0d14;
+}
+
+.inline-player__close:focus-visible {
+	outline: 2px solid var(--title-color, #fff);
+	outline-offset: 2px;
+}
+
+/* Mientras suena, la miniatura no reacciona al hover ni muestra sus insignias encima */
+.trailer-card.is-playing,
+.trailer-card.is-playing:hover,
+.media-capture-card.is-playing,
+.media-capture-card.is-playing:hover {
+	transform: none;
+	cursor: default;
+}
+
+.trailer-card.is-playing .trailer-card-thumb img {
+	transform: none;
+}
+
+.trailer-card.is-playing .trailer-card-play-btn,
+.trailer-card.is-playing .trailer-card-type,
+.media-capture-card.is-playing .play-overlay,
+.media-capture-card.is-playing .video-badge {
+	visibility: hidden;
+}
+
+.trailer-card.is-playing {
+	border-color: var(--title-glow-dim, rgba(255, 255, 255, 0.3));
+}
+
+.trailer-card.is-playing .trailer-card-cta {
+	visibility: hidden;
+}
+
+/* El hero de la ficha (desktop) como contenedor del reproductor cuando no hay tarjeta */
+.detail-sheet__poster.is-playing {
+	position: relative;
+	overflow: hidden;
+}
+
+.detail-sheet__poster.is-playing .detail-sheet__play {
+	visibility: hidden;
+}
+
+/* Desktop: una tarjeta normal que empieza a reproducir se agranda a 2 columnas × 2 filas
+   y el resto de la rejilla se recoloca alrededor. El destacado ya ocupa toda la fila. */
+@media (min-width: 1024px) {
+	.media-grid-trailers {
+		grid-auto-flow: row dense;
+	}
+
+	.media-grid-trailers > .trailer-card.is-playing:not(:first-child) {
+		grid-column: span 2;
+		grid-row: span 2;
+		border-radius: 20px;
+	}
+
+	.media-grid-trailers > .trailer-card.is-playing:not(:first-child) .trailer-card-body {
+		flex: 1;
+		gap: 8px;
+		padding: 20px 22px 18px;
+	}
+
+	.media-grid-trailers > .trailer-card.is-playing:not(:first-child) .trailer-card-title {
+		font-size: 1.45rem;
+	}
+
+	.media-grid-trailers > .trailer-card.is-playing:not(:first-child) .trailer-card-subtitle {
+		font-size: 0.85rem;
+	}
+
+	.media-grid-trailers > .trailer-card.is-playing:not(:first-child) .trailer-card-overview {
+		font-size: 0.9rem;
+		-webkit-line-clamp: 6;
+	}
+
+	.media-grid-trailers > .trailer-card.is-playing:not(:first-child) .trailer-card-footer {
+		margin-top: auto;
 	}
 }

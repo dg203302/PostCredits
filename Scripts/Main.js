@@ -63,6 +63,9 @@ function setActiveTab(name, { scroll = true } = {}) {
 	const viewport = document.getElementById('tab-viewport');
 	if (!viewport) return;
 
+	if (document.body.dataset.activeTab !== name && typeof stopInlinePlayer === 'function') {
+		stopInlinePlayer();
+	}
 	document.body.dataset.activeTab = name;
 
 	if (tabFooterNav) {
@@ -263,43 +266,88 @@ window.openLightbox = function(mediaHTML, title = '', overview = '', year = '', 
     lightbox.classList.add('active');
 };
 
-// Opens a YouTube video in the lightbox by building the iframe directly in JS
-// (avoids URL corruption from HTML string serialization inside onclick attributes)
-window.openVideoLightbox = function(videoKey, title = '', overview = '', year = '', rating = '') {
-    const lightbox = document.getElementById('media-lightbox');
-    const body = document.getElementById('lightbox-body');
-    const detailsContainer = document.getElementById('lightbox-details');
-    if (!lightbox || !body || !detailsContainer) return;
+// --- Reproductor de vídeo en línea ---
+// Los vídeos se reproducen dentro de su propia tarjeta (sin lightbox a pantalla completa).
+// Solo hay uno activo a la vez; se detiene al cambiar de pestaña o al abrir otro.
+// youtube.com (no youtube-nocookie): así el reproductor usa la sesión/cookies de YouTube del
+// navegador y YouTube no bloquea el vídeo con "confirma que no eres un bot".
+function buildYouTubeEmbedUrl(videoKey) {
+    const params = new URLSearchParams({
+        rel: '0',
+        autoplay: '1',
+        playsinline: '1',
+        modestbranding: '1',
+        enablejsapi: '1'
+    });
+    if (window.location.origin && window.location.origin.startsWith('http')) {
+        params.set('origin', window.location.origin);
+        params.set('widget_referrer', window.location.href);
+    }
+    return `https://www.youtube.com/embed/${encodeURIComponent(videoKey)}?${params}`;
+}
 
-    body.innerHTML = '';
-    // The player needs its own sized box: #lightbox-body has no fixed height, so an
-    // iframe with height:100% would collapse.
-    const wrap = document.createElement('div');
-    wrap.className = 'lightbox-video-wrap';
+let activeInlinePlayer = null;
+
+function stopInlinePlayer() {
+    if (!activeInlinePlayer) return;
+    const { host, card, player } = activeInlinePlayer;
+    activeInlinePlayer = null;
+    player.remove(); // quitar el iframe detiene el vídeo
+    host.classList.remove('is-playing');
+    if (card) {
+        card.classList.remove('is-playing');
+        card.removeAttribute('aria-busy');
+    }
+}
+
+/**
+ * Monta el reproductor dentro de `host` (la zona de imagen de la tarjeta).
+ * `card` es la tarjeta completa, que recibe .is-playing para poder agrandarse.
+ */
+function playVideoInline(host, videoKey, { card = null, title = '' } = {}) {
+    if (!host || !videoKey) return;
+    if (activeInlinePlayer && activeInlinePlayer.host === host) return; // ya está sonando aquí
+    stopInlinePlayer();
+
+    const player = document.createElement('div');
+    player.className = 'inline-player';
+
     const iframe = document.createElement('iframe');
-    iframe.src = `https://www.youtube-nocookie.com/embed/${videoKey}?rel=0&autoplay=1&playsinline=1`;
+    iframe.src = buildYouTubeEmbedUrl(videoKey);
+    iframe.title = title ? `Trailer: ${title}` : 'Trailer';
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     iframe.setAttribute('frameborder', '0');
     iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
     iframe.setAttribute('allowfullscreen', '');
-    iframe.setAttribute('title', title || 'Trailer');
-    wrap.appendChild(iframe);
-    body.appendChild(wrap);
 
-    detailsContainer.style.display = 'flex';
-    const ratingHTML = rating ? `<span class="lightbox-details-rating">⭐ ${rating}</span>` : '';
-    detailsContainer.innerHTML = `
-        ${title ? `<h4 class="lightbox-details-title">${title}</h4>` : ''}
-        <div class="lightbox-details-meta">
-            ${year ? `<span>${year}</span>` : ''}
-            ${year && rating ? `<span>•</span>` : ''}
-            ${ratingHTML}
-        </div>
-        ${overview ? `<p class="lightbox-details-overview">${overview}</p>` : ''}
-        <a class="lightbox-yt-link" href="https://www.youtube.com/watch?v=${videoKey}" target="_blank" rel="noopener noreferrer">Ver en YouTube ↗</a>
-    `;
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'inline-player__close';
+    closeBtn.setAttribute('aria-label', 'Stop video');
+    closeBtn.title = 'Stop video';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        stopInlinePlayer();
+        (card || host).focus?.({ preventScroll: true });
+    });
 
-    lightbox.classList.add('active');
-};
+    player.append(iframe, closeBtn);
+    // Los clics dentro del reproductor no deben volver a disparar la tarjeta
+    player.addEventListener('click', (e) => e.stopPropagation());
+    player.addEventListener('keydown', (e) => e.stopPropagation());
+    host.appendChild(player);
+    host.classList.add('is-playing');
+    if (card) card.classList.add('is-playing');
+
+    activeInlinePlayer = { host, card, player };
+
+    // Si la tarjeta cambió de tamaño (desktop) o quedó fuera de vista, llevarla a la vista
+    requestAnimationFrame(() => {
+        (card || host).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+}
+
 const lightboxEl = document.getElementById('media-lightbox');
 const lightboxCloseEl = document.getElementById('lightbox-close');
 if (lightboxEl) {
@@ -544,11 +592,65 @@ window.toggleBackdropView = function () {
 	document.documentElement.classList.toggle('backdrop-view-active', isActive);
 };
 
-const viewBackdropBtn = document.getElementById('view-backdrop-btn');
+// --- Barra de controles del fondo (Inicio) ---
+// restoreHome() reconstruye Inicio con innerHTML, lo que borraba estos botones y sus
+// listeners. Por eso se generan siempre desde aquí y sus clics van por delegación.
+const BACKDROP_CONTROLS_HTML = `
+	<button type="button" class="backdrop-control-btn" id="roulette-backdrop-btn" data-backdrop-action="roulette"
+		title="Cine-Roulette" aria-label="Cine-Roulette">
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<rect x="3" y="3" width="18" height="18" rx="3"></rect>
+			<circle cx="8" cy="8" r="1.2" fill="currentColor"></circle>
+			<circle cx="16" cy="8" r="1.2" fill="currentColor"></circle>
+			<circle cx="12" cy="12" r="1.2" fill="currentColor"></circle>
+			<circle cx="8" cy="16" r="1.2" fill="currentColor"></circle>
+			<circle cx="16" cy="16" r="1.2" fill="currentColor"></circle>
+		</svg>
+	</button>
+	<button type="button" class="backdrop-control-btn" id="view-backdrop-btn" data-backdrop-action="fullscreen"
+		title="View backdrop" aria-label="View backdrop fullscreen">
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path>
+			<circle cx="12" cy="12" r="3"></circle>
+		</svg>
+	</button>
+	<button type="button" class="backdrop-control-btn" id="settings-backdrop-btn" data-backdrop-action="settings"
+		title="Backdrop settings" aria-label="Backdrop settings" aria-expanded="false" aria-controls="backdrop-settings-menu">
+		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<line x1="4" y1="6" x2="20" y2="6"></line>
+			<line x1="4" y1="12" x2="20" y2="12"></line>
+			<line x1="4" y1="18" x2="20" y2="18"></line>
+			<circle cx="9" cy="6" r="2" fill="currentColor"></circle>
+			<circle cx="15" cy="12" r="2" fill="currentColor"></circle>
+			<circle cx="7" cy="18" r="2" fill="currentColor"></circle>
+		</svg>
+	</button>
+`;
 
-if (viewBackdropBtn) {
-	viewBackdropBtn.addEventListener('click', () => window.toggleBackdropView());
+function renderBackdropControls() {
+	document.querySelectorAll('[data-backdrop-controls]').forEach((el) => {
+		el.innerHTML = BACKDROP_CONTROLS_HTML;
+	});
 }
+
+renderBackdropControls();
+
+document.addEventListener('click', (e) => {
+	const btn = e.target.closest('[data-backdrop-action]');
+	if (!btn) return;
+
+	switch (btn.dataset.backdropAction) {
+		case 'fullscreen':
+			window.toggleBackdropView();
+			break;
+		case 'settings':
+			toggleSettingsMenu();
+			break;
+		case 'roulette':
+			openCineRoulette();
+			break;
+	}
+});
 
 // En pantalla completa <main> queda oculto (y con él la fila de controles del hero),
 // así que la salida es este botón, visible solo en ese modo.
@@ -565,8 +667,9 @@ const preventDefault = (e) => {
 		return;
 	}
 	const settingsMenu = document.getElementById('backdrop-settings-menu');
+	const favSheet = document.getElementById('fav-search-sheet');
 	if (settingsMenu && settingsMenu.classList.contains('active')) {
-		if (!settingsMenu.contains(e.target)) {
+		if (!settingsMenu.contains(e.target) && !(favSheet && favSheet.contains(e.target))) {
 			e.preventDefault();
 		}
 	}
@@ -598,7 +701,6 @@ window.addEventListener('touchmove', preventDefault, { passive: false });
 window.addEventListener('keydown', preventKeys, { passive: false });
 
 // Settings Menu Logic
-const settingsBtn = document.getElementById('settings-backdrop-btn');
 const settingsMenu = document.getElementById('backdrop-settings-menu');
 const settingsCloseBtn = document.getElementById('settings-close-btn');
 const bgSourceRadios = document.querySelectorAll('input[name="bg-source"]');
@@ -615,27 +717,41 @@ function updateFavoritesVisibility() {
 	if (favSearch) favSearch.style.display = isFav ? 'block' : 'none';
 }
 
-if (settingsBtn && settingsMenu) {
-	settingsBtn.addEventListener('click', (e) => {
-		e.stopPropagation();
-		settingsMenu.classList.toggle('active');
-		if (settingsMenu.classList.contains('active')) {
-			renderSettingsFavorites();
-			updateOrderControlsVisibility();
-			updateFavoritesVisibility();
-		}
-	});
+// El botón de ajustes se re-renderiza con Inicio, así que se busca en cada uso.
+function setSettingsMenuOpen(open) {
+	if (!settingsMenu) return;
+	settingsMenu.classList.toggle('active', open);
+	if (!open) setFavSearchOpen(false);
+	const btn = document.getElementById('settings-backdrop-btn');
+	if (btn) {
+		btn.classList.toggle('active', open);
+		btn.setAttribute('aria-expanded', String(open));
+	}
+	if (open) {
+		renderSettingsFavorites();
+		updateOrderControlsVisibility();
+		updateFavoritesVisibility();
+	}
+}
+
+function toggleSettingsMenu() {
+	if (!settingsMenu) return;
+	setSettingsMenuOpen(!settingsMenu.classList.contains('active'));
+}
+
+if (settingsMenu) {
 	document.addEventListener('click', (e) => {
-		if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
-			settingsMenu.classList.remove('active');
-		}
+		if (!settingsMenu.classList.contains('active')) return;
+		if (settingsMenu.contains(e.target) || e.target.closest('[data-backdrop-action="settings"]')) return;
+		if (favSearchSheet && favSearchSheet.contains(e.target)) return;
+		setSettingsMenuOpen(false);
 	});
 }
 
 if (settingsCloseBtn && settingsMenu) {
 	settingsCloseBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
-		settingsMenu.classList.remove('active');
+		setSettingsMenuOpen(false);
 	});
 }
 
@@ -690,7 +806,44 @@ function enableSheetSwipe(sheetEl, closeSheet) {
 }
 
 if (settingsMenu) {
-	enableSheetSwipe(settingsMenu, () => settingsMenu.classList.remove('active'));
+	enableSheetSwipe(settingsMenu, () => setSettingsMenuOpen(false));
+}
+
+// --- Buscador de favoritos: ventana flotante propia, abierta desde Ajustes ---
+const favSearchSheet = document.getElementById('fav-search-sheet');
+const openFavSearchBtn = document.getElementById('open-fav-search-btn');
+
+function setFavSearchOpen(open) {
+	if (!favSearchSheet) return;
+	favSearchSheet.classList.toggle('active', open);
+	favSearchSheet.setAttribute('aria-hidden', String(!open));
+	if (openFavSearchBtn) openFavSearchBtn.setAttribute('aria-expanded', String(open));
+	document.body.classList.toggle('fav-search-open', open);
+	if (open && window.matchMedia('(min-width: 769px)').matches) {
+		// Tras la animación de entrada, para que el foco no haga saltar la tarjeta
+		setTimeout(() => document.getElementById('settings-mini-search')?.focus({ preventScroll: true }), 420);
+	}
+}
+
+if (favSearchSheet) {
+	openFavSearchBtn?.addEventListener('click', (e) => {
+		e.stopPropagation();
+		setFavSearchOpen(!favSearchSheet.classList.contains('active'));
+	});
+	document.getElementById('fav-search-close-btn')?.addEventListener('click', (e) => {
+		e.stopPropagation();
+		setSettingsMenuOpen(false);
+	});
+	document.getElementById('fav-search-back-btn')?.addEventListener('click', (e) => {
+		e.stopPropagation();
+		setFavSearchOpen(false);
+	});
+	enableSheetSwipe(favSearchSheet, () => setFavSearchOpen(false));
+	document.addEventListener('keydown', (e) => {
+		if (e.key !== 'Escape') return;
+		if (favSearchSheet.classList.contains('active')) setFavSearchOpen(false);
+		else if (settingsMenu?.classList.contains('active')) setSettingsMenuOpen(false);
+	});
 }
 
 const downloadBackdropBtn = document.getElementById('download-backdrop-btn');
@@ -768,15 +921,60 @@ if (bgOrderRadios.length > 0) {
 }
 
 if (bgSpeedRadios.length > 0) {
+	// Tiempos preestablecidos (15/30/45s) o uno personalizado, guardado siempre en ms
+	const SPEED_PRESETS = ['15000', '30000', '45000'];
+	const SPEED_MIN_S = 3;
+	const SPEED_MAX_S = 3600;
+	const customRow = document.getElementById('backdrop-speed-custom');
+	const customInput = document.getElementById('backdrop-speed-custom-input');
 	const currentSpeed = localStorage.getItem('backdrop-speed') || '30000';
-	bgSpeedRadios.forEach(radio => {
-		if (radio.value === currentSpeed) {
-			radio.checked = true;
+	const isCustom = !SPEED_PRESETS.includes(currentSpeed);
+
+	const setCustomVisible = (visible) => {
+		if (customRow) customRow.hidden = !visible;
+	};
+
+	const applyCustomSpeed = () => {
+		if (!customInput) return;
+		let seconds = Math.round(Number(customInput.value));
+		if (!Number.isFinite(seconds) || seconds <= 0) seconds = 60;
+		seconds = Math.min(SPEED_MAX_S, Math.max(SPEED_MIN_S, seconds));
+		customInput.value = String(seconds);
+		const ms = String(seconds * 1000);
+		if (localStorage.getItem('backdrop-speed') !== ms) {
+			localStorage.setItem('backdrop-speed', ms);
+			initCarousel();
 		}
+	};
+
+	if (customInput && isCustom) {
+		customInput.value = String(Math.round(parseInt(currentSpeed, 10) / 1000) || 60);
+	}
+	setCustomVisible(isCustom);
+
+	bgSpeedRadios.forEach(radio => {
+		radio.checked = isCustom ? radio.value === 'custom' : radio.value === currentSpeed;
 		radio.addEventListener('change', (e) => {
+			if (e.target.value === 'custom') {
+				setCustomVisible(true);
+				applyCustomSpeed();
+				customInput?.focus({ preventScroll: true });
+				customInput?.select();
+				return;
+			}
+			setCustomVisible(false);
 			localStorage.setItem('backdrop-speed', e.target.value);
 			initCarousel();
 		});
+	});
+
+	customInput?.addEventListener('change', applyCustomSpeed);
+	customInput?.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			applyCustomSpeed();
+			customInput.blur();
+		}
 	});
 }
 
@@ -844,10 +1042,7 @@ function makeFavoritesReorderable(container) {
             searchInput.value = title;
             searchInput.dispatchEvent(new Event('input'));
             
-            const settingsMenu = document.getElementById('backdrop-settings-menu');
-            if (settingsMenu) {
-                settingsMenu.classList.remove('active');
-            }
+            setSettingsMenuOpen(false);
         }
     });
     
@@ -1017,13 +1212,13 @@ function renderSettingsFavorites() {
     const favs = JSON.parse(localStorage.getItem('postCreditsFavs') || '[]');
     
     if (favs.length === 0) {
-        favList.innerHTML = '<span style="color: var(--muted); font-size: 0.85rem;">No favorites added yet.</span>';
+        favList.innerHTML = '<p class="settings-favorites-empty">No favorites yet. Search above to add some.</p>';
         return;
     }
     
     favList.innerHTML = favs.map(f => {
         const poster = f.poster_path ? `https://image.tmdb.org/t/p/w200${f.poster_path}` : (f.backdrop_path ? `https://image.tmdb.org/t/p/w200${f.backdrop_path}` : 'https://via.placeholder.com/150x225?text=No+Poster');
-        return `<img src="${poster}" title="${f.title}" data-id="${f.id}" class="fav-drag-item" draggable="false" style="width: 75px; height: 112px; border-radius: 8px; object-fit: cover; border: 2px solid var(--accent); flex-shrink: 0; user-select: none;">`;
+        return `<img src="${poster}" title="${f.title}" alt="${f.title}" data-id="${f.id}" class="fav-drag-item" draggable="false">`;
     }).join('');
     
     makeFavoritesReorderable(favList);
@@ -1058,13 +1253,13 @@ if (miniSearchInput) {
                         const isFav = isFavorite(item.id);
                         
                         return `
-                            <div style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
-                                <img src="${poster}" style="width: 32px; height: 48px; object-fit: cover; border-radius: 4px; flex-shrink: 0;">
-                                <div style="flex: 1; min-width: 0;">
-                                    <p style="margin: 0; font-size: 0.9rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;" title="${title}">${title}</p>
-                                    <p style="margin: 0; font-size: 0.75rem; color: var(--muted);">${item.media_type === 'movie' ? 'Movie' : 'TV Show'}</p>
+                            <div class="fav-search-row">
+                                <img src="${poster}" alt="" class="fav-search-row__poster" loading="lazy">
+                                <div class="fav-search-row__info">
+                                    <p class="fav-search-row__title" title="${title}">${title}</p>
+                                    <p class="fav-search-row__type">${item.media_type === 'movie' ? 'Movie' : 'TV Show'}${(item.release_date || item.first_air_date) ? ` · ${(item.release_date || item.first_air_date).split('-')[0]}` : ''}</p>
                                 </div>
-                                <button class="mini-fav-btn fav-btn ${isFav ? 'active' : ''}" data-id="${item.id}" style="padding: 6px; font-size: 1rem; border-radius: 50%; min-width: 32px; height: 32px;">
+                                <button class="mini-fav-btn fav-btn ${isFav ? 'active' : ''}" data-id="${item.id}" aria-label="${isFav ? 'Remove from' : 'Add to'} favorites">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                                 </button>
                             </div>
@@ -1094,7 +1289,7 @@ if (miniSearchInput) {
                         });
                     });
                 } else {
-                    resultsContainer.innerHTML = '<span style="color: var(--muted); font-size: 0.85rem; padding: 8px;">No results found.</span>';
+                    resultsContainer.innerHTML = '<p class="fav-search-empty">No results found.</p>';
                 }
             } catch (err) {
                 console.error(err);
@@ -1104,6 +1299,89 @@ if (miniSearchInput) {
 }
 
 // --- Dynamic Main Content ---
+// --- Slideshow de imágenes en las tarjetas de Películas & Series ---
+// Póster principal, luego pósters alternativos y fotogramas (backdrops) de la película.
+const CARD_SLIDES_MAX = 5;
+
+function buildCardSlides(item, posterPath, featured = false) {
+    const images = item.details?.images || {};
+    const mainBackdrop = item.details?.backdrop_path || item.backdrop_path;
+
+    // Galería de fotogramas de la película (no solo la portada)
+    const stills = [];
+    const addStill = (path) => {
+        if (path && !stills.includes(path)) stills.push(path);
+    };
+    (images.backdrops || []).forEach(img => addStill(img.file_path));
+    addStill(mainBackdrop);
+
+    if (featured && stills.length) {
+        return stills.slice(0, CARD_SLIDES_MAX).map(path => `https://image.tmdb.org/t/p/w1280${path}`);
+    }
+
+    // Tarjeta normal: arranca con el póster (para reconocerla) y luego recorre la galería;
+    // si no hay fotogramas, usa pósters alternativos.
+    const slides = [];
+    if (posterPath) slides.push(`https://image.tmdb.org/t/p/w342${posterPath}`);
+    stills.slice(0, CARD_SLIDES_MAX - slides.length).forEach(path => {
+        slides.push(`https://image.tmdb.org/t/p/w780${path}`);
+    });
+    if (slides.length < 2) {
+        (images.posters || []).forEach(img => {
+            const url = `https://image.tmdb.org/t/p/w342${img.file_path}`;
+            if (slides.length < CARD_SLIDES_MAX && !slides.includes(url)) slides.push(url);
+        });
+    }
+    return slides;
+}
+
+function advanceCardSlideshow(wrapper) {
+    const slides = wrapper.querySelectorAll('.card-slide');
+    if (slides.length < 2) return;
+    const current = [...slides].findIndex(s => s.classList.contains('is-active'));
+    const nextIndex = (current + 1) % slides.length;
+    const next = slides[nextIndex];
+
+    const show = () => {
+        slides[current].classList.remove('is-active');
+        next.classList.add('is-active');
+        wrapper.querySelectorAll('.card-slide-dots span').forEach((dot, i) => {
+            dot.classList.toggle('is-active', i === nextIndex);
+        });
+        // Precarga la siguiente para que el próximo cambio no parpadee
+        const after = slides[(nextIndex + 1) % slides.length];
+        if (after.dataset.src && !after.src) after.src = after.dataset.src;
+    };
+
+    if (next.dataset.src && !next.src) {
+        next.src = next.dataset.src;
+        next.decode ? next.decode().then(show, show) : next.addEventListener('load', show, { once: true });
+    } else {
+        show();
+    }
+}
+
+(function startCardSlideshows() {
+
+    const TICK_MS = 1200; // cada tarjeta cambia cada 3 ticks, escalonadas en tres oleadas
+    let tick = 0;
+
+    setInterval(() => {
+        if (document.hidden || document.body.classList.contains('backdrop-view-mode')) return;
+        if ((document.body.dataset.activeTab || 'home') !== 'media') return;
+
+        tick++;
+        const vh = window.innerHeight;
+        document.querySelectorAll('#tab-panel-media [data-slideshow]').forEach((wrapper, i) => {
+            if ((tick + i) % 3 !== 0) return;
+            if (wrapper.matches(':hover')) return;
+            const rect = wrapper.getBoundingClientRect();
+            if (rect.bottom < 0 || rect.top > vh) return;
+            advanceCardSlideshow(wrapper);
+        });
+    }, TICK_MS);
+})();
+
 async function renderSection(endpoint, containerId, params = '') {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -1124,7 +1402,8 @@ async function renderSection(endpoint, containerId, params = '') {
                 detailedInitialItems = await Promise.all(validItems.map(async (item) => {
                     const type = item.media_type || (endpoint.includes('tv') ? 'tv' : 'movie');
                     try {
-                        const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits`);
+                        // images (sin idioma o en inglés) alimenta el slideshow del póster de la tarjeta
+                        const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=credits,images&include_image_language=null,en,es`);
                         const details = await res.json();
                         return { ...item, details, type };
                     } catch (err) {
@@ -1136,7 +1415,7 @@ async function renderSection(endpoint, containerId, params = '') {
                 detailedInitialItems = validItems.map(item => ({ ...item, type: 'person' }));
             }
 
-            const generateCardHTML = (item) => {
+            const generateCardHTML = (item, index) => {
                 const title = item.title || item.name;
                 const posterPath = item.poster_path || item.profile_path;
                 const poster = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : '';
@@ -1178,14 +1457,18 @@ async function renderSection(endpoint, containerId, params = '') {
                     }
                     
                     const backdropUrl = backdropPath ? `https://image.tmdb.org/t/p/w780${backdropPath}` : '';
+                    // La primera tarjeta es el destacado horizontal: prioriza fotogramas
+                    const slides = buildCardSlides(item, posterPath, index === 0);
 
                     return `
                         <div class="media-card-horizontal" data-id="${item.id}" data-type="${type}" data-title="${title.replace(/"/g, '&quot;')}">
                             <div class="card-backdrop" style="background-image: url(${backdropUrl});"></div>
                             <div class="card-overlay"></div>
                             
-                            <div class="card-poster-wrapper">
-                                <img src="${poster}" alt="${title}" class="card-poster" loading="lazy">
+                            <div class="card-poster-wrapper"${slides.length > 1 ? ' data-slideshow' : ''}>
+                                <img src="${slides[0] || poster}" alt="${title}" class="card-poster card-slide is-active" loading="lazy">
+                                ${slides.slice(1).map(url => `<img data-src="${url}" alt="" aria-hidden="true" class="card-poster card-slide" decoding="async">`).join('')}
+                                ${slides.length > 1 ? `<div class="card-slide-dots" aria-hidden="true">${slides.map((_, i) => `<span${i === 0 ? ' class="is-active"' : ''}></span>`).join('')}</div>` : ''}
                             </div>
                             
                             <div class="card-content">
@@ -1375,11 +1658,12 @@ async function loadIndustryNews() {
     }
     
     container.className = "news-grid-home";
-    container.innerHTML = newsList.map(news => {
+    currentNewsList = newsList;
+    container.innerHTML = newsList.map((news, index) => {
         const tags = (news.tags || []).filter(t => t && t !== news.category);
         const readMins = estimateReadingTime(news.description);
         return `
-        <article class="news-card-home">
+        <article class="news-card-home" data-news-index="${index}" tabindex="0" role="button" aria-label="Read article: ${escapeAttr(news.title)}">
             <div class="news-card-image" style="background-image: url('${news.image}')">
                 <span class="news-card-category">${news.category}</span>
             </div>
@@ -1396,18 +1680,226 @@ async function loadIndustryNews() {
                 ${tags.length ? `<div class="news-card-tags">${tags.map(t => `<span class="news-tag">${t}</span>`).join('')}</div>` : ''}
                 <div class="news-card-footer">
                     ${news.author ? `<span class="news-card-author">Por ${news.author}</span>` : '<span class="news-card-author"></span>'}
-                    <a href="${news.link}" target="_blank" rel="noopener noreferrer" class="news-card-readmore">Leer nota completa →</a>
+                    <span class="news-card-readmore">Leer nota →</span>
                 </div>
             </div>
         </article>
     `;
     }).join('');
 
+    container.querySelectorAll('.news-card-home[data-news-index]').forEach(card => {
+        const open = () => openNewsReader(currentNewsList[Number(card.dataset.newsIndex)]);
+        card.addEventListener('click', open);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                open();
+            }
+        });
+    });
+
     const nextEl = container.nextElementSibling;
     if (nextEl && nextEl.classList.contains('expand-btn-container')) {
         nextEl.remove();
     }
 }
+
+// --- Lector de noticias dentro de la web ---
+// El RSS solo trae un extracto; el texto completo sale de la API REST de WordPress del
+// medio (Variety la expone con CORS abierto). El HTML recibido se reconstruye con una
+// lista blanca de etiquetas antes de insertarlo.
+let currentNewsList = [];
+let newsReaderRequest = 0;
+
+function escapeAttr(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHTML(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function getWordPressPostApi(link) {
+    try {
+        const url = new URL(link);
+        const match = url.pathname.match(/-(\d{6,})\/?$/);
+        if (!match) return null;
+        return `${url.origin}/wp-json/wp/v2/posts/${match[1]}?_fields=content,title`;
+    } catch (e) {
+        return null;
+    }
+}
+
+function sanitizeArticleHTML(html, baseUrl) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const ALLOWED = new Set(['P', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'STRONG', 'EM', 'B', 'I', 'A', 'IMG', 'FIGURE', 'FIGCAPTION', 'BR']);
+    const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'NOSCRIPT', 'FORM', 'BUTTON', 'SVG', 'OBJECT', 'EMBED', 'VIDEO', 'AUDIO', 'INPUT', 'SELECT', 'TEXTAREA']);
+    const out = document.createElement('div');
+
+    const toSafeUrl = (value) => {
+        try {
+            const url = new URL(value, baseUrl);
+            return (url.protocol === 'https:' || url.protocol === 'http:') ? url.href : null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const walk = (node, parent) => {
+        node.childNodes.forEach(child => {
+            if (child.nodeType === Node.TEXT_NODE) {
+                parent.appendChild(document.createTextNode(child.textContent));
+                return;
+            }
+            if (child.nodeType !== Node.ELEMENT_NODE || DROP.has(child.tagName)) return;
+            if (!ALLOWED.has(child.tagName)) {
+                walk(child, parent); // desenvuelve contenedores (div, span, section...)
+                return;
+            }
+
+            const el = document.createElement(child.tagName.toLowerCase());
+            if (child.tagName === 'A') {
+                const href = toSafeUrl(child.getAttribute('href') || '');
+                if (href) {
+                    el.href = href;
+                    el.target = '_blank';
+                    el.rel = 'noopener noreferrer';
+                }
+            } else if (child.tagName === 'IMG') {
+                const src = toSafeUrl(child.getAttribute('data-lazy-src') || child.getAttribute('src') || '');
+                if (!src) return;
+                el.src = src;
+                el.alt = child.getAttribute('alt') || '';
+                el.loading = 'lazy';
+                el.decoding = 'async';
+                parent.appendChild(el);
+                return;
+            }
+
+            walk(child, el);
+            if (child.tagName !== 'BR' && !el.textContent.trim() && !el.querySelector('img')) return;
+            parent.appendChild(el);
+        });
+    };
+
+    walk(doc.body, out);
+    return out;
+}
+
+function renderNewsReaderShell(news) {
+    const scroll = document.getElementById('news-reader-scroll');
+    const readMins = estimateReadingTime(news.description);
+    const tags = (news.tags || []).filter(t => t && t !== news.category);
+    document.getElementById('news-reader-source').textContent = news.source || 'PostCredits';
+    document.getElementById('news-reader-category').textContent = news.category || 'News';
+
+    scroll.innerHTML = `
+        <div class="news-reader__hero">
+            <img src="${escapeAttr(news.image)}" alt="" class="news-reader__hero-img">
+            <span class="news-reader__chip">${escapeHTML(news.category)}</span>
+        </div>
+        <div class="news-reader__inner">
+            <h1 class="news-reader__title" id="news-reader-title">${escapeHTML(news.title)}</h1>
+            <div class="news-reader__meta">
+                ${news.author ? `<span>Por <strong>${escapeHTML(news.author)}</strong></span><span class="news-card-dot">•</span>` : ''}
+                <span>${escapeHTML(news.date)}</span>
+                <span class="news-card-dot">•</span>
+                <span id="news-reader-readtime">${readMins} min de lectura</span>
+            </div>
+            <p class="news-reader__lead">${escapeHTML(news.description)}</p>
+            <div class="news-reader__body" id="news-reader-body" aria-busy="true">
+                <div class="skeleton-block skeleton-line"></div>
+                <div class="skeleton-block skeleton-line"></div>
+                <div class="skeleton-block skeleton-line skeleton-line--short"></div>
+                <div class="skeleton-block skeleton-line"></div>
+                <div class="skeleton-block skeleton-line skeleton-line--short"></div>
+            </div>
+            ${tags.length ? `<div class="news-card-tags news-reader__tags">${tags.map(t => `<span class="news-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
+            <div class="news-reader__footer">
+                <span class="news-reader__credit">Fuente: ${escapeHTML(news.source || 'PostCredits')}</span>
+                ${news.link ? `<a class="news-reader__source-btn" href="${escapeAttr(news.link)}" target="_blank" rel="noopener noreferrer">Ver en ${escapeHTML(news.source || 'la fuente')} ↗</a>` : ''}
+            </div>
+        </div>
+    `;
+    scroll.scrollTop = 0;
+}
+
+async function openNewsReader(news) {
+    const reader = document.getElementById('news-reader');
+    if (!reader || !news) return;
+
+    renderNewsReaderShell(news);
+    reader.classList.add('active');
+    reader.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('news-reader-open');
+    setTimeout(() => reader.querySelector('.news-reader__panel')?.focus({ preventScroll: true }), 50);
+
+    const requestId = ++newsReaderRequest;
+    const body = document.getElementById('news-reader-body');
+    const api = news.link ? getWordPressPostApi(news.link) : null;
+
+    const showExcerptOnly = () => {
+        if (requestId !== newsReaderRequest || !body) return;
+        body.removeAttribute('aria-busy');
+        body.innerHTML = '<p class="news-reader__notice">No pudimos traer el texto completo de esta nota. Podés leerla en la fuente original.</p>';
+    };
+
+    if (!api) {
+        showExcerptOnly();
+        return;
+    }
+
+    try {
+        const res = await fetch(api);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const post = await res.json();
+        if (requestId !== newsReaderRequest) return;
+
+        const article = sanitizeArticleHTML(post?.content?.rendered || '', news.link);
+        if (!article.textContent.trim()) {
+            showExcerptOnly();
+            return;
+        }
+
+        body.removeAttribute('aria-busy');
+        body.innerHTML = '';
+        body.append(...article.childNodes);
+
+        // El extracto del RSS suele ser el primer párrafo: no mostrarlo dos veces
+        const lead = document.querySelector('.news-reader__lead');
+        const firstP = body.querySelector('p');
+        const norm = (t) => t.replace(/\s+/g, ' ').trim().slice(0, 60);
+        if (lead && firstP && norm(firstP.textContent) === norm(lead.textContent)) {
+            lead.remove();
+        }
+        const readTime = document.getElementById('news-reader-readtime');
+        if (readTime) readTime.textContent = `${estimateReadingTime(body.textContent)} min de lectura`;
+    } catch (err) {
+        console.warn('Could not load full article', err);
+        showExcerptOnly();
+    }
+}
+
+function closeNewsReader() {
+    const reader = document.getElementById('news-reader');
+    if (!reader || !reader.classList.contains('active')) return;
+    newsReaderRequest++;
+    reader.classList.remove('active');
+    reader.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('news-reader-open');
+}
+
+(function initNewsReader() {
+    const reader = document.getElementById('news-reader');
+    if (!reader) return;
+    reader.addEventListener('click', (e) => {
+        if (e.target.closest('[data-news-close]')) closeNewsReader();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeNewsReader();
+    });
+    enableSheetSwipe(reader.querySelector('.news-reader__panel'), closeNewsReader);
+})();
 
 async function loadPopularTrailers() {
     const container = document.getElementById('popular-trailers-list');
@@ -1467,7 +1959,7 @@ async function loadPopularTrailers() {
                     }
                     const ratingStr = t.rating > 0 ? t.rating.toFixed(1) : 'NR';
                     return `
-                        <article class="trailer-card"
+                        <article class="trailer-card" tabindex="0" role="button" aria-label="Play trailer: ${t.movieTitle.replace(/"/g, '&quot;')}"
                             data-video-key="${t.key}"
                             data-video-title="${t.movieTitle.replace(/"/g, '&quot;')}"
                             data-video-sub="${t.trailerName.replace(/"/g, '&quot;')}"
@@ -1500,14 +1992,17 @@ async function loadPopularTrailers() {
                 }).join('');
                 
                 container.querySelectorAll('.trailer-card[data-video-key]').forEach(card => {
+                    card.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            card.click();
+                        }
+                    });
                     card.addEventListener('click', () => {
-                        openVideoLightbox(
-                            card.dataset.videoKey,
-                            card.dataset.videoTitle || '',
-                            card.dataset.videoOverview || '',
-                            card.dataset.videoYear || '',
-                            card.dataset.videoRating || ''
-                        );
+                        playVideoInline(card.querySelector('.trailer-card-thumb'), card.dataset.videoKey, {
+                            card,
+                            title: card.dataset.videoTitle || ''
+                        });
                     });
                 });
 
@@ -1657,7 +2152,12 @@ window.restoreHome = function() {
                                 <span>Post</span>
                                 <span>Credits</span>
                             </h1>
+                            <p class="hero-header__now" id="hero-now">
+                                <span class="hero-header__now-label" id="hero-now-label">Now Showing</span>
+                                <span class="hero-header__now-title" id="hero-now-title"></span>
+                            </p>
                         </div>
+                        <div class="backdrop-controls" data-backdrop-controls role="toolbar" aria-label="Backdrop controls"></div>
                     </div>
                 </header>
             </section>
@@ -1704,6 +2204,7 @@ window.restoreHome = function() {
             </section>
         </div>
     `;
+    renderBackdropControls();
     enterHomeMode();
     bindTabViewport();
     loadDefaultContent();
@@ -2105,16 +2606,24 @@ function renderMovieDetails(details, mediaType) {
 
     main.innerHTML = html;
 
-    // Video cards and the hero play button play inline in the lightbox
-    main.querySelectorAll('[data-video-key]').forEach(card => {
+    // Vídeos: se reproducen dentro de su tarjeta. El botón del hero y "Ver trailer" usan la
+    // tarjeta de ese mismo vídeo en la galería; si no existe, el propio hero (desktop).
+    main.querySelectorAll('.media-capture-card[data-video-key]').forEach(card => {
         card.addEventListener('click', () => {
-            openVideoLightbox(
-                card.dataset.videoKey,
-                card.dataset.videoTitle || title,
-                card.dataset.videoOverview || details.overview || '',
-                card.dataset.videoYear || year,
-                card.dataset.videoRating || ratingStr
-            );
+            playVideoInline(card, card.dataset.videoKey, { card, title });
+        });
+    });
+    main.querySelectorAll('.detail-sheet__play[data-video-key], .detail-sheet__cta[data-video-key]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const key = btn.dataset.videoKey;
+            const galleryCard = [...main.querySelectorAll('.media-capture-card[data-video-key]')]
+                .find(c => c.dataset.videoKey === key);
+            if (galleryCard) {
+                playVideoInline(galleryCard, key, { card: galleryCard, title });
+            } else {
+                playVideoInline(main.querySelector('.detail-sheet__poster'), key, { title });
+            }
         });
     });
     
@@ -2501,8 +3010,10 @@ function shuffleArray(arr) {
 const roulettePageCache = new Map();
 let lastRouletteWinnerId = null;
 
+// La abre el botón de la barra de Inicio (delegación); queda como no-op si falta el modal.
+let openCineRoulette = () => {};
+
 function initCineRoulette() {
-    const rouletteBtn = document.getElementById('roulette-backdrop-btn');
     const modal = document.getElementById('roulette-modal');
     const closeBtn = document.getElementById('roulette-close-btn');
     const spinBtn = document.getElementById('roulette-spin-btn');
@@ -2510,9 +3021,9 @@ function initCineRoulette() {
     const track = document.getElementById('roulette-track');
     const winnerCard = document.getElementById('roulette-winner-card');
 
-    if (!rouletteBtn || !modal || !closeBtn || !spinBtn || !genreSelect || !track || !winnerCard) return;
+    if (!modal || !closeBtn || !spinBtn || !genreSelect || !track || !winnerCard) return;
 
-    rouletteBtn.addEventListener('click', () => {
+    openCineRoulette = () => {
         modal.classList.add('active');
         document.body.classList.add('roulette-active');
         document.documentElement.classList.add('roulette-active');
@@ -2521,7 +3032,7 @@ function initCineRoulette() {
         track.style.transition = 'none';
         track.style.transform = 'translateX(0)';
         spinBtn.disabled = false;
-    });
+    };
 
     const closeRouletteModal = () => {
         modal.classList.remove('active');
