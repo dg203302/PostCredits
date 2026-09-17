@@ -439,6 +439,11 @@ function updateOrderControlsVisibility() {
 async function fetchLatestBackdrops() {
     if (!BACKDROP_CONTAINER) return;
 
+    // Do not override backdrop if currently viewing movie or series details
+    if (!document.body.classList.contains('tabs-active') && document.body.classList.contains('content-grid')) {
+        return;
+    }
+
     const bgSource = localStorage.getItem('bg-source') || 'theaters';
     const labelEl = document.getElementById('backdrop-label');
     const settingsBtn = document.getElementById('settings-backdrop-btn');
@@ -604,6 +609,9 @@ async function loadMovieBackdrops(id, mediaType, defaultTitle) {
         const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/images?api_key=${TMDB_API_KEY}`);
         const data = await res.json();
 
+        // If no longer in detail view, don't overwrite the backdrop
+        if (document.body.classList.contains('tabs-active')) return;
+
         if (data.backdrops && data.backdrops.length > 0) {
             const movieBackdrops = data.backdrops.slice(0, 10).map(img => ({
                 url: `https://image.tmdb.org/t/p/original${img.file_path}`,
@@ -613,6 +621,8 @@ async function loadMovieBackdrops(id, mediaType, defaultTitle) {
             initCarousel();
             const settingsBtn = document.getElementById('settings-backdrop-btn');
             if (settingsBtn) settingsBtn.style.display = 'none';
+            const labelEl = document.getElementById('backdrop-label');
+            if (labelEl) labelEl.textContent = (mediaType === 'tv') ? 'Series' : 'Movie';
         }
     } catch (e) {
         console.error("Error fetching specific backdrops", e);
@@ -753,6 +763,10 @@ function updateFavoritesVisibility() {
 // El botón de ajustes se re-renderiza con Inicio, así que se busca en cada uso.
 function setSettingsMenuOpen(open) {
     if (!settingsMenu) return;
+    if (open) {
+        if (typeof window.toggleChat === 'function') window.toggleChat(false);
+        if (typeof window.closeCineRoulette === 'function') window.closeCineRoulette();
+    }
     settingsMenu.classList.toggle('active', open);
     if (!open) setFavSearchOpen(false);
     const btn = document.getElementById('settings-backdrop-btn');
@@ -766,6 +780,8 @@ function setSettingsMenuOpen(open) {
         updateFavoritesVisibility();
     }
 }
+window.setSettingsMenuOpen = setSettingsMenuOpen;
+window.closeSettingsMenu = () => setSettingsMenuOpen(false);
 
 function toggleSettingsMenu() {
     if (!settingsMenu) return;
@@ -932,7 +948,9 @@ if (bgSourceRadios.length > 0) {
         }
         radio.addEventListener('change', (e) => {
             localStorage.setItem('bg-source', e.target.value);
-            fetchLatestBackdrops();
+            if (document.body.classList.contains('tabs-active')) {
+                fetchLatestBackdrops();
+            }
             updateFavoritesVisibility();
         });
     });
@@ -1145,8 +1163,8 @@ function toggleFavorite(movieData, btnEl) {
     }
     localStorage.setItem('postCreditsFavs', JSON.stringify(favs));
 
-    // If currently showing favorites, refresh backdrops
-    if (localStorage.getItem('bg-source') === 'favorites') {
+    // If currently showing favorites on the dashboard (tabs-active), refresh backdrops
+    if (localStorage.getItem('bg-source') === 'favorites' && document.body.classList.contains('tabs-active')) {
         fetchLatestBackdrops();
     }
 }
@@ -1351,7 +1369,7 @@ function saveNewFavoritesOrder() {
 
     localStorage.setItem('postCreditsFavs', JSON.stringify(reorderedFavs));
 
-    if (localStorage.getItem('bg-source') === 'favorites') {
+    if (localStorage.getItem('bg-source') === 'favorites' && document.body.classList.contains('tabs-active')) {
         fetchLatestBackdrops();
     }
 }
@@ -2484,6 +2502,20 @@ function renderMovieDetails(details, mediaType) {
     const year = (details.release_date || details.first_air_date || '').split('-')[0];
     const poster = details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
 
+    // Establecer inmediatamente de forma exclusiva el fondo de esta película o serie
+    const initialBackdropPath = details.backdrop_path || details.poster_path;
+    if (initialBackdropPath) {
+        setBackdrops([{
+            url: `https://image.tmdb.org/t/p/original${initialBackdropPath}`,
+            title: title
+        }]);
+        initCarousel();
+    }
+    const settingsBtn = document.getElementById('settings-backdrop-btn');
+    if (settingsBtn) settingsBtn.style.display = 'none';
+    const labelEl = document.getElementById('backdrop-label');
+    if (labelEl) labelEl.textContent = (mediaType === 'tv') ? 'Series' : 'Movie';
+
     // Meta data
     const runtimeStr = details.runtime ? `${Math.floor(details.runtime / 60)}h ${details.runtime % 60}m` : (details.episode_run_time && details.episode_run_time[0] ? `${details.episode_run_time[0]}m` : '');
     const language = details.spoken_languages && details.spoken_languages.length > 0 ? details.spoken_languages[0].english_name : (details.original_language ? details.original_language.toUpperCase() : '');
@@ -3175,6 +3207,12 @@ let lastRouletteWinnerId = null;
 
 // La abre el botón de la barra de Inicio (delegación); queda como no-op si falta el modal.
 let openCineRoulette = () => { };
+window.closeCineRoulette = function () {
+    const modal = document.getElementById('roulette-modal');
+    if (modal) modal.classList.remove('active');
+    document.body.classList.remove('roulette-active');
+    document.documentElement.classList.remove('roulette-active');
+};
 
 function initCineRoulette() {
     const modal = document.getElementById('roulette-modal');
@@ -3187,6 +3225,8 @@ function initCineRoulette() {
     if (!modal || !closeBtn || !spinBtn || !genreSelect || !track || !winnerCard) return;
 
     openCineRoulette = () => {
+        if (typeof window.toggleChat === 'function') window.toggleChat(false);
+        if (typeof window.closeSettingsMenu === 'function') window.closeSettingsMenu();
         modal.classList.add('active');
         document.body.classList.add('roulette-active');
         document.documentElement.classList.add('roulette-active');
@@ -3202,6 +3242,7 @@ function initCineRoulette() {
         document.body.classList.remove('roulette-active');
         document.documentElement.classList.remove('roulette-active');
     };
+    window.closeCineRoulette = closeRouletteModal;
 
     closeBtn.addEventListener('click', closeRouletteModal);
     enableSheetSwipe(modal.querySelector('.roulette-modal-content'), closeRouletteModal);

@@ -1696,6 +1696,10 @@
 
             function toggleChat(force) {
                 isOpen = (force !== undefined) ? force : !isOpen;
+                if (isOpen) {
+                    if (typeof window.closeSettingsMenu === 'function') window.closeSettingsMenu();
+                    if (typeof window.closeCineRoulette === 'function') window.closeCineRoulette();
+                }
                 fab.classList.toggle('open', isOpen);
                 iconOpen.style.display = isOpen ? 'none' : '';
                 iconClose.style.display = isOpen ? '' : 'none';
@@ -1729,6 +1733,7 @@
                     }, 400);
                 }
             }
+            window.toggleChat = toggleChat;
 
             /* Overlay click closes sheet on mobile */
             if (overlay) overlay.addEventListener('click', () => toggleChat(false));
